@@ -102,7 +102,7 @@ export default function HowItWorks() {
         </motion.div>
 
         {/* Steps Zig-Zag flow with timeline connectors */}
-        <div className="relative max-w-4xl mx-auto pl-4 md:pl-0">
+        <div className="relative max-w-4xl mx-auto">
           
           {/* LÍNEA DE PROGRESO VERTICAL */}
           <div 
@@ -125,7 +125,7 @@ export default function HowItWorks() {
           {/* PASO 1 */}
           <div 
             ref={step1Ref}
-            className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-28 pl-12 md:pl-0"
+            className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-28 pl-16 md:pl-0"
           >
             {/* Left Column (Desktop: text-right, Mobile: text-left) */}
             <motion.div 
@@ -165,7 +165,7 @@ export default function HowItWorks() {
           {/* PASO 2 */}
           <div 
             ref={step2Ref}
-            className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-28 pl-12 md:pl-0"
+            className="relative flex flex-col md:flex-row items-start md:items-center justify-between mb-16 md:mb-28 pl-16 md:pl-0"
           >
             {/* Left Column (Placeholder) */}
             <div className="hidden md:block md:w-[calc(50%-40px)] md:pr-12" />
@@ -205,7 +205,7 @@ export default function HowItWorks() {
           {/* PASO 3 */}
           <div 
             ref={step3Ref}
-            className="relative flex flex-col md:flex-row items-start md:items-center justify-between pl-12 md:pl-0"
+            className="relative flex flex-col md:flex-row items-start md:items-center justify-between pl-16 md:pl-0"
           >
             {/* Left Column (Desktop: text-right, Mobile: text-left) */}
             <motion.div 

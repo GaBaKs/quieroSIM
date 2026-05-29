@@ -89,19 +89,19 @@ export default function Footer() {
 
             {/* Popular Destinations (Using translation keys) */}
             <div className="flex flex-col space-y-6">
-              <h4 className="text-white font-bold text-sm">Top Destinos</h4>
+              <h4 className="text-white font-bold text-sm">{t('footer.topDestinations')}</h4>
               <ul className="space-y-4 text-zinc-500 font-medium">
-                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM Europa</Link></li>
-                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM Estados Unidos</Link></li>
-                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM España</Link></li>
-                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM México</Link></li>
-                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM Brasil</Link></li>
+                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM {t('countries.Europa')}</Link></li>
+                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM {t('countries.Estados Unidos')}</Link></li>
+                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM {t('countries.España')}</Link></li>
+                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM {t('countries.México')}</Link></li>
+                <li><Link href="/#destinations-section" className="hover:text-[#b3ff6b] transition-colors">eSIM {t('countries.Brasil')}</Link></li>
               </ul>
             </div>
 
             {/* Legal */}
             <div className="flex flex-col space-y-6">
-              <h4 className="text-white font-bold text-sm">Legal</h4>
+              <h4 className="text-white font-bold text-sm">{t('footer.legalTitle')}</h4>
               <ul className="space-y-4 text-zinc-500 font-medium">
                 <li><Link href={docs.terms} target="_blank" className="hover:text-[#b3ff6b] transition-colors">{t('footer.terms')}</Link></li>
                 <li><Link href={docs.privacy} target="_blank" className="hover:text-[#b3ff6b] transition-colors">{t('footer.privacy')}</Link></li>

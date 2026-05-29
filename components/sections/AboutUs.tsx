@@ -4,11 +4,13 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { motion } from 'motion/react';
 import { Linkedin, Mail } from 'lucide-react';
 import Image from 'next/image';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 import felipeImg from '@/images/felipe-babenco.jpeg';
 
 export default function AboutUs() {
   const { fadeUp } = useScrollReveal();
+  const { t } = useLanguage();
 
   return (
     <section className="py-20 md:py-32 bg-white text-zinc-900 relative overflow-hidden" id="about">
@@ -24,7 +26,7 @@ export default function AboutUs() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-sans font-medium tracking-tight mb-4">
-            Quiénes Somos
+            {t('aboutUs.title')}
           </h2>
           <div className="w-16 h-1 bg-[#b3ff6b] mx-auto rounded-full" />
         </motion.div>
@@ -55,7 +57,7 @@ export default function AboutUs() {
                 
                 {/* Fallback content in case image doesn't load/exist yet */}
                 <div className="absolute inset-0 flex items-center justify-center -z-10 bg-zinc-100">
-                  <span className="text-zinc-400 text-xs">FOTO PROFESIONAL</span>
+                  <span className="text-zinc-400 text-xs">{t('aboutUs.photoPlaceholder')}</span>
                 </div>
               </div>
             </div>
@@ -74,22 +76,22 @@ export default function AboutUs() {
           >
             <div>
               <h3 className="text-3xl font-bold font-sans tracking-tight text-zinc-900 mb-1">
-                Felipe Babenco
+                {t('aboutUs.name')}
               </h3>
               <p className="text-[#9933c1] tracking-wider text-sm uppercase">
-                CEO & Co-Founder
+                {t('aboutUs.role')}
               </p>
             </div>
 
             <div className="space-y-4 text-zinc-500 font-sans leading-relaxed text-lg">
               <p>
-                Emprendedor argentino y fundador de múltiples proyectos vinculados a tecnología, logística y experiencias para viajeros.
+                {t('aboutUs.p1')}
               </p>
               <p>
-                Felipe es también cofundador de <span className="text-zinc-900 font-medium">Tu Traslado</span>, una de las empresas de transporte para eventos y turismo más reconocidas de Argentina, movilizando miles de pasajeros en festivales, recitales y experiencias de viaje en todo el país.
+                {t('aboutUs.p2')}<span className="text-zinc-900 font-medium">{t('aboutUs.tuTraslado')}</span>{t('aboutUs.p2_2')}
               </p>
               <p>
-                Con una fuerte visión comercial y enfoque en experiencia de usuario, lidera el desarrollo estratégico de QUIERO con el objetivo de construir una marca global de conectividad digital para viajeros.
+                {t('aboutUs.p3')}
               </p>
             </div>
 

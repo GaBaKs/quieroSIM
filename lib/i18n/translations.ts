@@ -3,6 +3,33 @@ export type Language = 'ES' | 'EN' | 'PT';
 // Fallback to simpler any type to avoid strict TS interface building for nested objects
 export const translations: Record<Language, any> = {
   ES: {
+    countries: {
+      'Estados Unidos': 'Estados Unidos',
+      'España': 'España',
+      'Italia': 'Italia',
+      'Francia': 'Francia',
+      'Reino Unido': 'Reino Unido',
+      'México': 'México',
+      'Brasil': 'Brasil',
+      'Japón': 'Japón',
+      'Alemania': 'Alemania',
+      'Canadá': 'Canadá',
+      'Colombia': 'Colombia',
+      'Perú': 'Perú',
+      'Chile': 'Chile',
+      'Argentina': 'Argentina',
+      'Suiza': 'Suiza',
+      'Tailandia': 'Tailandia',
+      'Turquía': 'Turquía',
+      'Egipto': 'Egipto',
+      'Sudáfrica': 'Sudáfrica',
+      'Europa Regional': 'Europa Regional',
+      'América Latina': 'América Latina',
+      'Global (85+ Países)': 'Global (85+ Países)',
+      'Europa': 'Europa',
+      'Asia': 'Asia',
+      'África': 'África'
+    },
     navbar: {
       about: 'Quiénes somos',
       howItWorks: 'Cómo Funciona',
@@ -11,6 +38,17 @@ export const translations: Record<Language, any> = {
       testimonials: 'Testimonios',
       faq: 'Preguntas',
       buyEsim: 'Comprar eSIM'
+    },
+    aboutUs: {
+      title: 'Quiénes Somos',
+      name: 'Felipe Babenco',
+      role: 'CEO & Co-Founder',
+      p1: 'Emprendedor argentino y fundador de múltiples proyectos vinculados a tecnología, logística y experiencias para viajeros.',
+      p2: 'Felipe es también cofundador de ',
+      tuTraslado: 'Tu Traslado',
+      p2_2: ', una de las empresas de transporte para eventos y turismo más reconocidas de Argentina, movilizando miles de pasajeros en festivales, recitales y experiencias de viaje en todo el país.',
+      p3: 'Con una fuerte visión comercial y enfoque en experiencia de usuario, lidera el desarrollo estratégico de QUIERO con el objetivo de construir una marca global de conectividad digital para viajeros.',
+      photoPlaceholder: 'FOTO PROFESIONAL'
     },
     hero: {
       slogan: 'Internet para Viajar',
@@ -132,6 +170,8 @@ export const translations: Record<Language, any> = {
       desc: 'Tecnología eSIM para conectividad internacional inmediata. Internet de alta velocidad en más de 190 países sin cargos ocultos ni sorpresas de roaming.',
       securePayment: 'Canal de pago seguro:',
       linksTitle: 'Enlaces',
+      topDestinations: 'Top Destinos',
+      legalTitle: 'Legal',
       links: ['Destinos Populares', 'Compatibilidad eSIM', 'Opiniones de Clientes', 'Preguntas Frecuentes'],
       supportTitle: 'Soporte y Garantías',
       rights: 'Todos los derechos reservados.',
@@ -174,6 +214,33 @@ export const translations: Record<Language, any> = {
     }
   },
   EN: {
+    countries: {
+      'Estados Unidos': 'United States',
+      'España': 'Spain',
+      'Italia': 'Italy',
+      'Francia': 'France',
+      'Reino Unido': 'United Kingdom',
+      'México': 'Mexico',
+      'Brasil': 'Brazil',
+      'Japón': 'Japan',
+      'Alemania': 'Germany',
+      'Canadá': 'Canada',
+      'Colombia': 'Colombia',
+      'Perú': 'Peru',
+      'Chile': 'Chile',
+      'Argentina': 'Argentina',
+      'Suiza': 'Switzerland',
+      'Tailandia': 'Thailand',
+      'Turquía': 'Turkey',
+      'Egipto': 'Egypt',
+      'Sudáfrica': 'South Africa',
+      'Europa Regional': 'Regional Europe',
+      'América Latina': 'Latin America',
+      'Global (85+ Países)': 'Global (85+ Countries)',
+      'Europa': 'Europe',
+      'Asia': 'Asia',
+      'África': 'Africa'
+    },
     navbar: {
       about: 'About Us',
       howItWorks: 'How it Works',
@@ -182,6 +249,17 @@ export const translations: Record<Language, any> = {
       testimonials: 'Reviews',
       faq: 'FAQ',
       buyEsim: 'Buy eSIM'
+    },
+    aboutUs: {
+      title: 'About Us',
+      name: 'Felipe Babenco',
+      role: 'CEO & Co-Founder',
+      p1: 'Argentine entrepreneur and founder of multiple projects linked to technology, logistics and travel experiences.',
+      p2: 'Felipe is also a co-founder of ',
+      tuTraslado: 'Tu Traslado',
+      p2_2: ', one of the most recognized transport companies for events and tourism in Argentina, mobilizing thousands of passengers in festivals, concerts, and travel experiences throughout the country.',
+      p3: 'With a strong commercial vision and focus on user experience, he leads the strategic development of QUIERO aiming to build a global brand for travelers\' digital connectivity.',
+      photoPlaceholder: 'PROFESSIONAL PHOTO'
     },
     hero: {
       slogan: 'Internet for Travel',
@@ -303,6 +381,8 @@ export const translations: Record<Language, any> = {
       desc: 'eSIM technology for immediate international connectivity. High-speed internet in over 190 countries with no hidden fees or roaming surprises.',
       securePayment: 'Secure payment channel:',
       linksTitle: 'Links',
+      topDestinations: 'Top Destinations',
+      legalTitle: 'Legal',
       links: ['Popular Destinations', 'eSIM Compatibility', 'Customer Reviews', 'FAQ'],
       supportTitle: 'Support and Warranties',
       rights: 'All rights reserved.',
@@ -345,6 +425,33 @@ export const translations: Record<Language, any> = {
     }
   },
   PT: {
+    countries: {
+      'Estados Unidos': 'Estados Unidos',
+      'España': 'Espanha',
+      'Italia': 'Itália',
+      'Francia': 'França',
+      'Reino Unido': 'Reino Unido',
+      'México': 'México',
+      'Brasil': 'Brasil',
+      'Japón': 'Japão',
+      'Alemania': 'Alemanha',
+      'Canadá': 'Canadá',
+      'Colombia': 'Colômbia',
+      'Perú': 'Peru',
+      'Chile': 'Chile',
+      'Argentina': 'Argentina',
+      'Suiza': 'Suíça',
+      'Tailandia': 'Tailândia',
+      'Turquía': 'Turquia',
+      'Egipto': 'Egito',
+      'Sudáfrica': 'África do Sul',
+      'Europa Regional': 'Europa Regional',
+      'América Latina': 'América Latina',
+      'Global (85+ Países)': 'Global (Mais de 85 Países)',
+      'Europa': 'Europa',
+      'Asia': 'Ásia',
+      'África': 'África'
+    },
     navbar: {
       about: 'Quem somos',
       howItWorks: 'Como Funciona',
@@ -353,6 +460,17 @@ export const translations: Record<Language, any> = {
       testimonials: 'Depoimentos',
       faq: 'Perguntas',
       buyEsim: 'Comprar eSIM'
+    },
+    aboutUs: {
+      title: 'Quem Somos',
+      name: 'Felipe Babenco',
+      role: 'CEO & Co-Founder',
+      p1: 'Empreendedor argentino e fundador de múltiplos projetos vinculados a tecnologia, logística e experiências para viajantes.',
+      p2: 'Felipe também é cofundador da ',
+      tuTraslado: 'Tu Traslado',
+      p2_2: ', uma das empresas de transporte para eventos e turismo mais reconhecidas da Argentina, mobilizando milhares de passageiros em festivais, shows e experiências de viagem em todo o país.',
+      p3: 'Com forte visão comercial e foco na experiência do usuário, lidera o desenvolvimento estratégico da QUIERO com o objetivo de construir uma marca global de conectividade digital para viajantes.',
+      photoPlaceholder: 'FOTO PROFISSIONAL'
     },
     hero: {
       slogan: 'Internet para Viajar',
@@ -474,6 +592,8 @@ export const translations: Record<Language, any> = {
       desc: 'Tecnologia eSIM para conectividade internacional imediata. Internet de alta velocidade em mais de 190 países, sem custos ocultos nem surpresas.',
       securePayment: 'Canal de pagamento seguro:',
       linksTitle: 'Links Úteis',
+      topDestinations: 'Top Destinos',
+      legalTitle: 'Legal',
       links: ['Destinos Populares', 'Compatibilidade eSIM', 'Opiniões dos Clientes', 'Perguntas Frequentes'],
       supportTitle: 'Suporte e Garantia',
       rights: 'Todos os direitos reservados.',

@@ -106,10 +106,10 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { title: t('navbar.about'), id: 'about' },
     { title: t('navbar.howItWorks'), id: 'how-it-works-section' },
     { title: t('navbar.destinations'), id: 'destinations-section' },
     { title: t('navbar.compatibility'), id: 'compatibility-section' },
+    { title: t('navbar.about'), id: 'about' },
     { title: t('navbar.testimonials'), id: 'testimonials-section' },
     { title: t('navbar.faq'), id: 'faq-section' },
   ];

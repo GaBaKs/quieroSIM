@@ -25,12 +25,16 @@ export default function Destinations() {
     return destinations.filter(dest => {
       const matchesRegion = selectedRegion === 'All' || dest.region === selectedRegion;
       const lowerQuery = searchQuery.toLowerCase();
-      const matchesName = dest.name.toLowerCase().includes(lowerQuery);
+      
+      const translatedName = t(`countries.${dest.name}`);
+      const actualTranslatedName = translatedName.startsWith('countries.') ? dest.name : translatedName;
+      
+      const matchesName = dest.name.toLowerCase().includes(lowerQuery) || actualTranslatedName.toLowerCase().includes(lowerQuery);
       const matchesAlias = dest.searchAliases ? dest.searchAliases.some(alias => alias.toLowerCase().includes(lowerQuery)) : false;
       const matchesCode = dest.code.toLowerCase().includes(lowerQuery);
       return matchesRegion && (matchesName || matchesAlias || matchesCode);
     });
-  }, [selectedRegion, searchQuery]);
+  }, [selectedRegion, searchQuery, t]);
 
   // Find the selected active index
   const selectedIndex = useMemo(() => {
@@ -268,9 +272,9 @@ export default function Destinations() {
   const regionTabs = [
     { label: t('destinations.filterAll'), value: 'All' },
     { label: t('destinations.filterPopular'), value: 'Americas' }, // Actually Americans, but keeping logic
-    { label: 'Europa', value: 'Europe' },
-    { label: 'Asia', value: 'Asia' },
-    { label: 'África', value: 'Africa' },
+    { label: t('countries.Europa').startsWith('countries.') ? 'Europa' : t('countries.Europa'), value: 'Europe' },
+    { label: t('countries.Asia').startsWith('countries.') ? 'Asia' : t('countries.Asia'), value: 'Asia' },
+    { label: t('countries.África').startsWith('countries.') ? 'África' : t('countries.África'), value: 'Africa' },
     { label: t('destinations.filterRegional'), value: 'Global' },
   ];
 
@@ -383,7 +387,7 @@ export default function Destinations() {
                       {dest.code.length <= 2 ? (
                         <img 
                           src={`https://flagcdn.com/w80/${dest.code.toLowerCase()}.png`} 
-                          alt={dest.name} 
+                          alt={t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)} 
                           className="h-7 w-10 object-cover rounded shadow-md mb-2 shrink-0 select-none border border-white/5 pointer-events-none"
                         />
                       ) : (
@@ -397,7 +401,7 @@ export default function Destinations() {
                       </span>
                       {/* Name snippet truncated */}
                       <span className="font-sans font-bold text-[10px] text-center px-1 truncate max-w-full text-zinc-800 pointer-events-none">
-                        {dest.name}
+                        {t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)}
                       </span>
                     </button>
                   );
@@ -429,7 +433,7 @@ export default function Destinations() {
               {activeDestination.code.length <= 2 ? (
                 <img 
                   src={`https://flagcdn.com/w160/${activeDestination.code.toLowerCase()}.png`} 
-                  alt={activeDestination.name} 
+                  alt={t(`countries.${activeDestination.name}`).startsWith('countries.') ? activeDestination.name : t(`countries.${activeDestination.name}`)} 
                   className="h-10 w-14 object-cover rounded-md shadow-sm border border-black/5 select-none shrink-0"
                 />
               ) : (
@@ -437,7 +441,7 @@ export default function Destinations() {
               )}
               <div>
                 <h3 className="font-sans font-extrabold text-zinc-900 text-xl sm:text-2xl leading-none">
-                  {t('destinations.details.plansFor').replace('{country}', activeDestination.name)}
+                  {t('destinations.details.plansFor').replace('{country}', t(`countries.${activeDestination.name}`).startsWith('countries.') ? activeDestination.name : t(`countries.${activeDestination.name}`))}
                 </h3>
                 <p className="font-sans text-xs text-zinc-500 mt-1.5 leading-relaxed">
                   {t('destinations.details.prepaidPlans')}
@@ -546,7 +550,7 @@ export default function Destinations() {
           <div className="rounded-xl border border-black/5 p-4 bg-[#fafafa] text-xs text-zinc-500 flex items-start gap-2.5 leading-relaxed font-sans mt-8">
             <HelpCircle className="h-4 w-4 text-zinc-400 mt-0.5 flex-shrink-0" />
             <p>
-              <strong>{t('destinations.details.deliveryTitle')}</strong> {t('destinations.details.deliveryDesc').replace('{country}', activeDestination.name)}
+              <strong>{t('destinations.details.deliveryTitle')}</strong> {t('destinations.details.deliveryDesc').replace('{country}', t(`countries.${activeDestination.name}`).startsWith('countries.') ? activeDestination.name : t(`countries.${activeDestination.name}`))}
             </p>
           </div>
         </div>
@@ -558,7 +562,7 @@ export default function Destinations() {
         isOpen={isCheckoutOpen} 
         onClose={() => setIsCheckoutOpen(false)} 
         plan={activePlan} 
-        destinationName={activeDestination.name} 
+        destinationName={t(`countries.${activeDestination.name}`).startsWith('countries.') ? activeDestination.name : t(`countries.${activeDestination.name}`)} 
         destinationFlag={activeDestination.flag} 
         destinationCode={activeDestination.code}
       />
