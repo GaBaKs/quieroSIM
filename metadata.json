@@ -1,0 +1,6 @@
+{
+  "name": "QuieroSIM",
+  "description": "Landing page de QuieroSIM para conectarse al instante en más de 190 países. Compra digital, pago en USD y activación inmediata.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+:root {
+  --color-lime:        #83ff00;   /* acento principal */
+  --color-lime-vivid:  #6ce600;   /* hover / activo */
+  --color-violet:      #9933c1;   /* secundario */
+  --color-violet-dark: #7100a5;   /* hover violet */
+  --color-black:       #000000;
+  --color-gray:        #a0a0a0;
+  --color-white:       #ffffff;
+  --color-blanco-fondo: #fafafa;
+}
+
+@theme {
+  --color-lime-brand: var(--color-lime);
+  --color-lime-vivid-brand: var(--color-lime-vivid);
+  --color-violet-brand: var(--color-violet);
+  --color-violet-dark-brand: var(--color-violet-dark);
+  --color-black-brand: var(--color-black);
+  --color-gray-brand: var(--color-gray);
+  --color-white-brand: var(--color-white);
+  --color-blanco-fondo: var(--color-blanco-fondo);
+  --font-sans: 'Roboto', ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* Custom Floating Scrollbar styles - hide original native scrollbars completely */
+html {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Chrome, Safari, Opera, Edge (Webkit) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Global font setting fallback */
+body {
+  font-family: var(--font-sans);
+}
