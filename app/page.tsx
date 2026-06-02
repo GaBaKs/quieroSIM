@@ -4,6 +4,7 @@ import Hero from '@/components/sections/Hero';
 import HowItWorks from '@/components/sections/HowItWorks';
 import Destinations from '@/components/sections/Destinations';
 import Compatibility from '@/components/sections/Compatibility';
+import Comparison from '@/components/sections/Comparison';
 import AboutUs from '@/components/sections/AboutUs';
 import Testimonials from '@/components/sections/Testimonials';
 import FAQ from '@/components/sections/FAQ';
@@ -20,6 +21,7 @@ export default function Home() {
         <HowItWorks />
         <Destinations />
         <Compatibility />
+        <Comparison />
         <AboutUs />
         <Testimonials />
         <FAQ />

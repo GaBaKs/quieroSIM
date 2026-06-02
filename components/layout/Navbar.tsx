@@ -6,6 +6,7 @@ import { Menu, X, Globe, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import QuieroButton from '@/components/ui/QuieroButton';
+import Logo from '@/components/ui/Logo';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface NavLinkProps {
@@ -71,6 +72,7 @@ export default function Navbar() {
       'destinations-section', 
       'how-it-works-section', 
       'compatibility-section', 
+      'about',
       'testimonials-section', 
       'faq-section'
     ];
@@ -136,15 +138,11 @@ export default function Navbar() {
                 setIsOpen(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex items-center gap-2 group cursor-pointer whitespace-nowrap z-10"
+              className="flex items-center group cursor-pointer whitespace-nowrap z-10"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#b3ff6b] text-black shadow-md group-hover:scale-105 transition-transform duration-200">
-                <Check className="h-4.5 w-4.5 stroke-[3.5]" />
+              <div className="group-hover:scale-[1.02] transition-transform duration-200">
+                <Logo />
               </div>
-              <span className="font-sans font-black text-xl tracking-tight text-zinc-900 bg-black/[0.02] px-2 py-1 rounded-xl flex items-center transition-all duration-300">
-                <span className="text-[#9933c1]">Quiero</span>
-                <span className="bg-[#9933c1] text-[#83ff00] px-0.5 py-0.5 rounded-md ml-1 leading-none">SIM</span>
-              </span>
             </Link>
           </div>
 
@@ -217,7 +215,7 @@ export default function Navbar() {
                 onClick={(e) => handleLinkClick(e, 'destinations-section')}
               >
                 <QuieroButton 
-                  variant="primary" 
+                  variant="secondary" 
                   showArrow 
                   className="py-2 px-5 text-sm font-black whitespace-nowrap"
                 >
@@ -309,7 +307,7 @@ export default function Navbar() {
                   onClick={(e) => handleLinkClick(e, 'destinations-section')}
                   className="block w-full"
                 >
-                  <QuieroButton variant="primary" showArrow className="w-full font-black text-base py-3.5">
+                  <QuieroButton variant="secondary" showArrow className="w-full font-black text-base py-3.5">
                     {t('navbar.buyEsim')}
                   </QuieroButton>
                 </Link>

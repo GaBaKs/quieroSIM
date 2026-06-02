@@ -10,6 +10,7 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 import CheckoutModal from '@/components/CheckoutModal';
 import QuieroButton from '../ui/QuieroButton';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { translateFeature } from '@/lib/i18n/featureTranslator';
 
 export default function Destinations() {
   const { fadeUp } = useScrollReveal();
@@ -18,7 +19,7 @@ export default function Destinations() {
   const [selectedDestId, setSelectedDestId] = useState('eeuu'); // pre-select USA
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // Filtered list of destinations
   const filteredDestinations = useMemo(() => {
@@ -334,7 +335,7 @@ export default function Destinations() {
                   onClick={() => setSelectedRegion(tab.value as any)}
                   className={`px-4 py-2 rounded-full font-sans text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer border shrink-0 ${
                     selectedRegion === tab.value
-                      ? 'bg-[#83ff00] text-black border-[#83ff00] shadow-md shadow-[#83ff00]/10'
+                      ? 'bg-[#9933c1] text-white border-[#9933c1] shadow-md shadow-[#9933c1]/20'
                       : 'bg-white text-zinc-500 border-black/10 hover:bg-[#fafafa] hover:text-zinc-900'
                   }`}
                 >
@@ -378,7 +379,7 @@ export default function Destinations() {
                       type="button"
                       className={`flex flex-col items-center justify-center shrink-0 h-32 rounded-2xl border transition-all duration-300 ${
                         isSelected
-                          ? 'border-[#b3ff6b] bg-[#b3ff6b]/10 text-zinc-900 shadow-[0_0_24px_rgba(179,255,107,0.15)] scale-110 z-10'
+                          ? 'border-[#9933c1] bg-[#9933c1]/10 text-zinc-900 shadow-[0_0_24px_rgba(153,51,193,0.15)] scale-110 z-10'
                           : 'border-black/5 bg-[#fafafa] text-zinc-500 opacity-80 hover:opacity-100 hover:border-black/10 hover:bg-[#f0f0f0] scale-100'
                       }`}
                       style={{ width: `${ITEM_WIDTH}px` }}
@@ -503,13 +504,7 @@ export default function Destinations() {
                     {/* Features checks list */}
                     <ul className="space-y-2 py-2 text-xs text-zinc-600 flex-1">
                       {plan.features.map((feat, i) => {
-                        let localizedFeat = feat;
-                        if (feat.includes('Red ')) {
-                          localizedFeat = feat.replace('Red ', t('destinations.details.features.network').replace('{name}', ' ').replace('  ', ' ').trim()).replace('Network', ' Network');
-                        }
-                        if (feat.includes('Internet 4G')) localizedFeat = t('destinations.details.features.speed');
-                        if (feat.includes('Compartir') && feat.includes('Datos')) localizedFeat = t('destinations.details.features.hotspot');
-                        if (feat.includes('Activación instant')) localizedFeat = t('destinations.details.features.instant');
+                        const localizedFeat = translateFeature(feat, lang);
                         return (
                           <li key={i} className="flex items-start gap-2">
                             <Check className="h-3.5 w-3.5 text-[#9933c1] flex-shrink-0 mt-0.5" />

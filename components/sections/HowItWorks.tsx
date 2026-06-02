@@ -250,7 +250,7 @@ export default function HowItWorks() {
             href="#destinations-section"
             onClick={(e) => handleScroll(e, 'destinations-section')}
           >
-            <QuieroButton variant="primary" showArrow className="px-10 py-5 text-base">
+            <QuieroButton variant="secondary" showArrow className="px-10 py-5 text-base">
               {t('hero.seePlans')}
             </QuieroButton>
           </Link>

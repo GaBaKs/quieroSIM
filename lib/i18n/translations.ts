@@ -138,6 +138,21 @@ export const translations: Record<Language, any> = {
         other: 'Huawei P40, Mate 40 Pro, Xiaomi 12T Pro, Sony Xperia 10 IV, Oppo Find X3 Pro.'
       }
     },
+    comparison: {
+      title: '¿Por qué elegir la eSIM de',
+      titleHighlight: 'QuieroSIM?',
+      columns: {
+        local: 'Proveedor local',
+        others: 'Otras empresas eSIM'
+      },
+      features: [
+        'Planes flexibles e internacionales',
+        'Instalación automática por código QR',
+        'Soporte humano 24/7 multilingüe',
+        'Redes premium con cobertura global',
+        'Conserva tu WhatsApp local activo'
+      ]
+    },
     testimonials: {
       badge: 'Opiniones Verificadas',
       title: 'Lo que dicen los viajeros',
@@ -163,7 +178,7 @@ export const translations: Record<Language, any> = {
         { q: '¿Qué pasa si consumo la totalidad de los datos de mi plan?', a: 'Si consumes la totalidad de los Gigabytes (GB) de tu paquete antes de que terminen los días de vigencia, la conexión a internet se detendrá. Al ser un servicio prepago, nunca te cobraremos excedentes ni cargos automáticos por uso adicional. Podrás adquirir una nueva eSIM en nuestra web si necesitas más datos.' },
         { q: '¿Se instala el mismo código QR eSIM en múltiples teléfonos?', a: 'No. Por estrictas regulaciones y límites técnicos internacionales de telecomunicaciones, cada perfil eSIM es de única descarga. Puede instalarse una sola vez en un único dispositivo y queda vinculado permanentemente a ese número de serie digital. Si decides eliminar el perfil de la configuración de tu teléfono de viaje, el código QR quedará inutilizado y no podrá reinstalarse en el mismo ni en otro teléfono.' },
         { q: '¿Emiten comprobante o factura de compra?', a: 'Sí. Inmediatamente después de autorizar el cobro del prepago a través de Stripe, recibirás de forma automática en tu correo el número de orden y factura en formato corporativo PDF de QUIERO LLC, con todos los detalles de la compra.' },
-        { q: '¿Tienen asistencia posventa en idioma español?', a: 'Totalmente. Entendemos el contratiempo que puede ocasionar quedarse sin conexión en un viaje. Por ello, contamos con un calificado equipo de soporte técnico en español disponible las 24 horas del día, los 7 días de la semana, a través del correo support@quierosim.com o vía chat web, listos para resolver cualquier consulta en minutos.' }
+        { q: '¿Tienen asistencia posventa?', a: 'Totalmente. Entendemos el contratiempo que puede ocasionar quedarse sin conexión en un viaje. Por ello, contamos con un calificado equipo de soporte técnico multilingüe que ofrece asistencia en todos los idiomas, disponible las 24 horas del día, los 7 días de la semana, a través del correo support@quierosim.com o vía chat web, listos para resolver cualquier consulta en minutos.' }
       ]
     },
     footer: {
@@ -349,6 +364,21 @@ export const translations: Record<Language, any> = {
         other: 'Huawei P40, Mate 40 Pro, Xiaomi 12T Pro, Sony Xperia 10 IV, Oppo Find X3 Pro.'
       }
     },
+    comparison: {
+      title: 'Why choose the',
+      titleHighlight: 'QuieroSIM eSIM?',
+      columns: {
+        local: 'Local provider',
+        others: 'Other eSIM companies'
+      },
+      features: [
+        'Flexible and international plans',
+        'Automatic setup via QR code',
+        'Human 24/7 multilingual support',
+        'Premium networks with global coverage',
+        'Keep your local WhatsApp active'
+      ]
+    },
     testimonials: {
       badge: 'Verified Reviews',
       title: 'What travelers say',
@@ -374,7 +404,7 @@ export const translations: Record<Language, any> = {
         { q: 'What happens if I use all the data in my plan?', a: 'If you use all the Gigabytes (GB) in your package before the validity days end, the internet connection will stop. Being a prepaid service, we will never charge you overages or automatic fees for additional use. You can buy a new eSIM on our website if you need more data.' },
         { q: 'Can the same eSIM QR code be installed on multiple phones?', a: 'No. Due to strict regulations and international telecommunications technical limits, each eSIM profile is single-download. It can be installed only once on a single device and remains permanently linked to that digital serial number. If you decide to delete the profile from your travel phone settings, the QR code will be unusable and cannot be reinstalled on the same or another phone.' },
         { q: 'Do you issue a receipt or purchase invoice?', a: 'Yes. Immediately after authorizing the prepaid charge through Stripe, you will automatically receive in your email the order number and invoice in corporate PDF format from QUIERO LLC, with all the purchase details.' },
-        { q: 'Do you have after-sales support?', a: 'Absolutely. We understand the inconvenience of being without connection on a trip. Therefore, we have a qualified technical support team available 24 hours a day, 7 days a week, through the email support@quierosim.com or via web chat, ready to resolve any questions in minutes.' }
+        { q: 'Do you have after-sales support?', a: 'Absolutely. We understand the inconvenience of being without connection on a trip. Therefore, we have a qualified multilingual technical support team providing assistance in all languages, available 24 hours a day, 7 days a week, through the email support@quierosim.com or via web chat, ready to resolve any questions in minutes.' }
       ]
     },
     footer: {
@@ -560,6 +590,21 @@ export const translations: Record<Language, any> = {
         other: 'Huawei P40, Mate 40 Pro, Xiaomi 12T Pro, Sony Xperia 10 IV, Oppo Find X3 Pro.'
       }
     },
+    comparison: {
+      title: 'Por que escolher o',
+      titleHighlight: 'eSIM da QuieroSIM?',
+      columns: {
+        local: 'Provedor local',
+        others: 'Outras empresas eSIM'
+      },
+      features: [
+        'Planos flexíveis e internacionais',
+        'Configuração automática via código QR',
+        'Suporte humano 24/7 multilíngue',
+        'Redes premium com cobertura global',
+        'Mantenha seu WhatsApp local ativo'
+      ]
+    },
     testimonials: {
       badge: 'Avaliações Verificadas',
       title: 'O que dizem os viajantes',
@@ -585,7 +630,7 @@ export const translations: Record<Language, any> = {
         { q: 'O que acontece se eu consumir todos os dados do meu plano?', a: 'Se você consumir a totalidade dos Gigabytes (GB) do seu pacote antes de terminarem os dias de validade, a conexão à internet será interrompida. Sendo um serviço pré-pago, nunca cobraremos excedentes ou cobranças automáticas por uso adicional. Você pode adquirir um novo eSIM no nosso site se precisar de mais dados.' },
         { q: 'O mesmo código QR do eSIM é instalado em vários telefones?', a: 'Não. Devido a regulamentações estritas e limites técnicos internacionais de telecomunicações, cada perfil eSIM é de download único. Ele pode ser instalado apenas uma vez em um único dispositivo e permanece permanentemente vinculado a esse número de série digital. Se você decidir excluir o perfil das configurações do telefone de viagem, o código QR ficará inutilizado e não poderá ser reinstalado no mesmo ou em outro telefone.' },
         { q: 'Vocês emitem recibo ou fatura de compra?', a: 'Sim. Imediatamente após a autorização da cobrança pré-paga através da Stripe, você receberá automaticamente no seu e-mail o número do pedido e a fatura em formato corporativo PDF da QUIERO LLC, com todos os detalhes da compra.' },
-        { q: 'Vocês têm suporte pós-venda?', a: 'Totalmente. Entendemos o contratempo que pode ser ficar sem conexão em uma viagem. Por isso, temos uma equipe de suporte técnico qualificada disponível 24 horas por dia, 7 dias por semana, através do e-mail support@quierosim.com ou via chat na web, prontos para resolver qualquer dúvida em minutos.' }
+        { q: 'Vocês têm suporte pós-venda?', a: 'Totalmente. Entendemos o contratempo que pode ser ficar sem conexão em uma viagem. Por isso, temos uma equipe de suporte técnico multilíngue qualificada que oferece atendimento em todos os idiomas, disponível 24 horas por dia, 7 dias por semana, através do e-mail support@quierosim.com ou via chat na web, prontos para resolver qualquer dúvida em minutos.' }
       ]
     },
     footer: {

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Mail, MapPin, Check, Facebook, Instagram } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import Logo from '@/components/ui/Logo';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -44,14 +45,8 @@ export default function Footer() {
           {/* LEFT COLUMN: Logo & Socials */}
           <div className="lg:w-[30%] flex flex-col space-y-12">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#b3ff6b] text-black shadow-md">
-                <Check className="h-4 w-4 stroke-[4]" />
-              </div>
-              <span className="font-sans font-black text-2xl tracking-tighter flex items-center">
-                <span className="text-[#9933c1]">Quiero</span>
-                <span className="bg-[#9933c1] text-[#83ff00] px-1 py-0.5 rounded leading-none ml-0.5">SIM</span>
-              </span>
+            <div>
+              <Logo isDark={true} />
             </div>
 
             {/* Social Icons */}
