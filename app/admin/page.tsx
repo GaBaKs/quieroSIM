@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart3, TrendingUp, Users, ShoppingCart, Activity } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, Variants } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 export default function AdminDashboardPage() {
@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
     { service: 'WhatsApp API', status: 'operational' },
   ];
 
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const item = {
+  const item: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
