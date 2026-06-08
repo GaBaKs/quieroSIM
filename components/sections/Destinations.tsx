@@ -297,7 +297,7 @@ export default function Destinations() {
           variants={fadeUp}
           className="mx-auto max-w-[680px] text-center mb-12 space-y-2"
         >
-          <span className="text-[#b3ff6b] text-xs font-semibold tracking-[0.2em] uppercase mb-3 block">
+          <span className="text-[#9933c1] text-xs font-semibold tracking-[0.2em] uppercase mb-3 block">
             {t('destinations.badge')}
           </span>
           <h2 className="font-sans text-3xl sm:text-4xl font-black tracking-tight text-zinc-900">

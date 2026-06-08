@@ -6,56 +6,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import whiteGreyBg from '@/src/assets/images/whitegreybg.jpg';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { compatibilityDevices } from '@/lib/data/esim-devices';
 
-const compatibilityDevices = [
-  {
-    brand: 'Apple',
-    models: [
-      'iPhone XR', 'iPhone XS', 'iPhone XS Max',
-      'iPhone 11', 'iPhone 11 Pro', 'iPhone 11 Pro Max',
-      'iPhone SE (2ª generación o posterior)',
-      'iPhone 12', 'iPhone 12 mini', 'iPhone 12 Pro', 'iPhone 12 Pro Max',
-      'iPhone 13', 'iPhone 13 mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max',
-      'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
-      'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
-      'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max'
-    ]
-  },
-  {
-    brand: 'Samsung',
-    models: [
-      'Galaxy S20', 'Galaxy S20+', 'Galaxy S20 Ultra',
-      'Galaxy S21', 'Galaxy S21+', 'Galaxy S21 Ultra',
-      'Galaxy S22', 'Galaxy S22+', 'Galaxy S22 Ultra',
-      'Galaxy S23', 'Galaxy S23+', 'Galaxy S23 Ultra',
-      'Galaxy S24', 'Galaxy S24+', 'Galaxy S24 Ultra',
-      'Galaxy Note 20', 'Galaxy Note 20 Ultra',
-      'Galaxy Z Fold', 'Galaxy Z Fold 2', 'Galaxy Z Fold 3', 'Galaxy Z Fold 4', 'Galaxy Z Fold 5',
-      'Galaxy Z Flip', 'Galaxy Z Flip 3', 'Galaxy Z Flip 4', 'Galaxy Z Flip 5'
-    ]
-  },
-  {
-    brand: 'Google',
-    models: [
-      'Pixel 3', 'Pixel 3 XL',
-      'Pixel 4', 'Pixel 4 XL', 'Pixel 4a',
-      'Pixel 5',
-      'Pixel 6', 'Pixel 6 Pro', 'Pixel 6a',
-      'Pixel 7', 'Pixel 7 Pro', 'Pixel 7a',
-      'Pixel 8', 'Pixel 8 Pro', 'Pixel 8a',
-      'Pixel 9', 'Pixel 9 Pro', 'Pixel 9 Pro XL'
-    ]
-  },
-  {
-    brand: 'Otros',
-    models: [
-      'Motorola Razr 2019', 'Motorola Razr 5G', 'Motorola Razr 40 Ultra',
-      'Huawei P40', 'Huawei P40 Pro', 'Huawei Mate 40 Pro',
-      'Xiaomi 12T Pro', 'Xiaomi 13 Pro', 'Xiaomi 14 Ultra',
-      'Sony Xperia 1 IV', 'Sony Xperia 10 IV', 'Oppo Find X5 Pro'
-    ]
-  }
-];
+
 
 export default function Compatibility() {
   const { fadeUp } = useScrollReveal();
@@ -70,18 +23,42 @@ export default function Compatibility() {
   const searchResult = useMemo(() => {
     if (!searchQuery.trim()) return null;
     
-    const query = searchQuery.toLowerCase().trim();
+    let query = searchQuery.toLowerCase().trim();
     let exactMatch = false;
 
     // Buscar coincidencia exacta o coincidencia parcial
     for (const data of compatibilityDevices) {
       for (const model of data.models) {
-        if (model.toLowerCase().includes(query)) {
-          exactMatch = true;
-          break;
+        const modelLower = model.toLowerCase();
+        // Si el query está contenido en el modelo (ej: query "iphone 13" in "iphone 13 pro") 
+        // OR el modelo está contenido en el query (ej: model "iphone 13" in query "tengo un iphone 13")
+        if (modelLower.includes(query) || query.includes(modelLower)) {
+          // Avoid matching "iphone 5" with "iphone 15" if spacing gets weird, 
+          // but generic .includes is safe if spaces are intact.
+          // Wait, if query is "iphone", it will match every iphone!
+          // We must demand more than just the brand. Let's explicitly bypass if query is JUST the brand.
+          if (query !== 'iphone' && query !== 'samsung' && query !== 'galaxy' && query !== 'pixel' && query !== 'google') {
+            exactMatch = true;
+            break;
+          }
         }
       }
       if (exactMatch) break;
+    }
+
+    // Filtros de rechazo conocidos (modelos viejos muy comunes)
+    if (query.match(/iphone\s*(4|5|6|7|8|x\b)/)) {
+      return {
+        status: 'error',
+        message: '❌ Modelo NO compatible. Los modelos de iPhone anteriores al iPhone XR/XS (Apple iPhone X y anteriores) no tienen tecnología eSIM.'
+      };
+    }
+
+    if (query.match(/galaxy\s*(s7|s8|s9|s10|a\d|j\d|m\d|note\s*[89]|note\s*10)/)) {
+      return {
+        status: 'error',
+        message: '❌ Modelo NO compatible. Las gamas medias/bajas de Samsung y los modelos Galaxy S10 y anteriores no disponen de eSIM.'
+      };
     }
 
     if (exactMatch) {
@@ -91,23 +68,23 @@ export default function Compatibility() {
       };
     }
 
-    // Coincidencia heurística para marcas conocidas
-    if (query.includes('iphone') || query.includes('ipad')) {
+    // Coincidencia heurística pidiendo más detalles
+    if (query.includes('iphone') || query.includes('ipad') || query.includes('apple')) {
       return {
         status: 'warning',
-        message: '⚠️ Altamente probable. Prácticamente todos los dispositivos de Apple desde el año 2018 (iPhone XS en adelante) soportan eSIM de forma nativa.'
+        message: '⚠️ Por favor, escribe tu modelo exacto (Ej: iPhone 13). Prácticamente todos los dispositivos de Apple desde 2018 (iPhone XS/XR en adelante) soportan eSIM.'
       };
     }
-    if (query.includes('galaxy') || query.includes('samsung') || query.includes('s2') || query.includes('s3') || query.includes('s4')) {
+    if (query.includes('galaxy') || query.includes('samsung')) {
       return {
         status: 'warning',
-        message: '⚠️ Probablemente compatible. Casi todas las gamas Premium de Samsung desde 2020 (S20, Note 20, Z Fold/Flip en adelante) soportan eSIM.'
+        message: '⚠️ Por favor, escribe tu modelo exacto (Ej: Galaxy S22). Casi todas las gamas Premium de Samsung desde 2020 soportan eSIM.'
       };
     }
     if (query.includes('pixel') || query.includes('google')) {
       return {
         status: 'warning',
-        message: '⚠️ Probablemente compatible. Los modelos Google Pixel desde la versión Pixel 3/4 soportan eSIM sin inconvenientes.'
+        message: '⚠️ Por favor, escribe tu modelo exacto. Los modelos Google Pixel desde la versión Pixel 3/4 soportan eSIM sin inconvenientes.'
       };
     }
 

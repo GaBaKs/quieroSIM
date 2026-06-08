@@ -13,6 +13,8 @@
   --color-blanco-fondo: #fafafa;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-lime-brand: var(--color-lime);
   --color-lime-vivid-brand: var(--color-lime-vivid);

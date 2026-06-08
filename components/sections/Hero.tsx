@@ -9,6 +9,7 @@ import QuieroButton from '../ui/QuieroButton';
 import Logo from '../ui/Logo';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import imagotipo from '@/images/imagotipo.svg';
+import chicasHeroImg from '@/src/assets/images/chicas-hero.jpg';
 
 export default function Hero() {
   const [searchVal, setSearchVal] = useState('');
@@ -199,7 +200,7 @@ export default function Hero() {
                 { icon: Download, label: 'QR instantáneo' },
               ].map(({ icon: Icon, label }, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Icon className="h-3.5 w-3.5 text-[#b3ff6b] shrink-0" />
+                  <Icon className="h-3.5 w-3.5 text-[#9933c1] shrink-0" />
                   <span className="text-xs font-semibold text-zinc-500 whitespace-nowrap">
                     {label}
                   </span>
@@ -242,7 +243,7 @@ export default function Hero() {
                initial={{ opacity: 0, scale: 0.8 }}
                animate={{ opacity: 1, scale: 1 }}
                transition={{ duration: 1, delay: 0.5 }}
-               className="absolute right-0 top-16 flex gap-3 z-0 -rotate-[22deg] items-center pointer-events-none"
+               className="absolute right-4 md:right-8 lg:right-0 top-16 flex gap-3 z-0 -rotate-[22deg] items-center pointer-events-none translate-x-[10px]"
             >
               <svg width="180" height="40" viewBox="0 0 150 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-40">
                 <path d="M0 35 Q 75 15 150 0" stroke="#9933c1" strokeWidth="2.5" strokeDasharray="6 6" />
@@ -250,105 +251,22 @@ export default function Hero() {
               <Plane className="h-10 w-10 text-[#9933c1] drop-shadow-sm -ml-2" fill="#9933c1" />
             </motion.div>
 
-            {/* Smartphone mockup */}
+            {/* Person holding smartphone mockup */}
             <motion.div 
-              initial={{ opacity: 0, y: 50, rotateY: 0, rotateX: 0, rotateZ: 0 }}
-              animate={{ opacity: 1, y: 0, rotateY: -22, rotateX: 12, rotateZ: -6 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              style={{
-                 transformStyle: 'preserve-3d',
-                 transformPerspective: 1200,
-                 boxShadow: '1px 1px 0 #f4f4f5, 2px 2px 0 #e4e4e7, 3px 4px 0 #d4d4d8, 4px 5px 0 #a1a1aa, 5px 7px 0 #71717a, 15px 25px 40px rgba(0,0,0,0.25)',
-                 background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)'
-              }}
-              className="relative w-full max-w-[270px] aspect-[9/18.5] rounded-[44px] p-[6px] z-10 hover:-translate-y-2 transition-transform duration-500 ease-out mr-8"
-              id="hero-smartphone-simulator"
+              className="relative w-full max-w-[320px] sm:max-w-[360px] lg:max-w-[400px] aspect-[3/4] z-10 flex rounded-3xl overflow-hidden shadow-2xl mx-auto lg:mx-0"
             >
-              {/* Dynamic camera notch */}
-              <div className="absolute top-[18px] left-1/2 -translate-x-1/2 h-5 w-[90px] bg-black rounded-full z-20 flex items-center justify-between px-2.5 shadow-[inset_0_-1px_2px_rgba(255,255,255,0.1)]">
-                <div className="h-2 w-2 rounded-full bg-[#111]" />
-                <div className="h-2 w-2 rounded-full bg-[#0a0a0a] shadow-[inset_0_0_2px_rgba(255,255,255,0.2)]" />
-              </div>
-
-              {/* SIM screen layout */}
-              <div className="w-full h-full bg-black rounded-[38px] overflow-hidden flex flex-col relative font-sans text-white border-[3px] border-black">
-                
-                {/* Simulated status bar */}
-                <div className="h-8 flex justify-between items-center px-6 pt-2 text-[10px] text-zinc-500">
-                  <span>9:41 AM</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-[var(--color-lime)]">eSIM 5G</span>
-                    <div className="h-2 w-4 border border-zinc-700 rounded-xs p-px flex items-center">
-                      <div className="h-full w-full bg-zinc-500" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Smartphone App Header */}
-                <div className="px-5 py-4 flex items-center justify-between border-b border-white/5 bg-zinc-950/40">
-                  <div className="flex items-center gap-2">
-                    <Logo className="scale-[0.55] origin-left -ml-2" isDark />
-                    <span className="font-bold text-[10px] text-zinc-400 absolute right-8">App</span>
-                  </div>
-                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse relative z-10" />
-                </div>
-
-                {/* Simulated Active eSIM card */}
-                <div className="flex-1 p-5 flex flex-col justify-between space-y-4">
-                  
-                  {/* Digital Boarding screen */}
-                  <div className="space-y-3">
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2.5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-wide">{t('hero.phoneLine')}</span>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#b3ff6b] uppercase tracking-wider bg-[#b3ff6b]/15 px-1.5 py-0.5 rounded">
-                          ● {t('hero.phoneActive')}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-lg font-bold tracking-tight">EE.UU. eSIM</div>
-                          <div className="text-[11px] text-zinc-400">Operadores: AT&T / T-Mobile</div>
-                        </div>
-                        <span className="text-xl">🇺🇸</span>
-                      </div>
-
-                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full w-3/4 bg-gradient-to-r from-[#b3ff6b] to-lime-500 rounded-full" />
-                      </div>
-                      
-                      <div className="flex justify-between text-[11px] text-zinc-500">
-                        <span>{t('hero.phoneConsumidos')}</span>
-                        <span>{t('hero.phoneTotales')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick-install scanning tutorial vector */}
-                  <div className="rounded-xl bg-violet-950/20 border border-[#b3ff6b]/10 p-4 text-center space-y-2">
-                    <div className="text-xs font-bold text-[#b3ff6b]">{t('hero.phoneAuto')}</div>
-                    <div className="w-18 h-18 mx-auto rounded bg-white p-1 flex items-center justify-center">
-                      <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-950">
-                        <path fill="currentColor" d="M0,0 h20 v5 h-15 v15 h-5 z M80,0 h20 v20 h-5 v-15 h-15 z M0,80 h5 v15 h-5 v5 h-20 z M100,100 h-20 v-5 h15 v-15 h5 z" />
-                        <rect x="15" y="15" width="20" height="20" fill="currentColor" />
-                        <rect x="65" y="65" width="20" height="20" fill="currentColor" />
-                        <rect x="65" y="15" width="20" height="20" fill="currentColor" />
-                        <rect x="15" y="65" width="20" height="20" fill="currentColor" />
-                        <rect x="42" y="42" width="16" height="16" fill="currentColor" />
-                      </svg>
-                    </div>
-                    <p className="text-[10px] text-zinc-400 leading-normal">
-                      {t('hero.phoneAutoDesc')}
-                    </p>
-                  </div>
-
-                  {/* Sim legal note */}
-                  <div className="text-center text-[9px] text-zinc-600">
-                    {t('hero.phoneSupport')}
-                  </div>
-                </div>
-              </div>
+              {/* Background Image */}
+              <Image 
+                src={chicasHeroImg} 
+                alt="Chicas mostrando el celular" 
+                className="absolute inset-0 w-full h-full object-cover bg-zinc-200"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="%23f4f4f5"/><text x="50" y="50" font-family="sans-serif" font-size="5" text-anchor="middle" dominant-baseline="middle" fill="%23a1a1aa">Sube la imagen como /src/assets/images/chicas-hero.jpg</text></svg>';
+                }}
+              />
             </motion.div>
           </div>
         </div>

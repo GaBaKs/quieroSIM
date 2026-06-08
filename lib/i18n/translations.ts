@@ -155,10 +155,11 @@ export const translations: Record<Language, any> = {
     },
     testimonials: {
       badge: 'Opiniones Verificadas',
-      title: 'Lo que dicen los viajeros',
+      title: 'Viajeros que confían en QuieroSIM',
+      verifiedBuyer: 'Comprador verificado',
       subtitle: 'Más de 10,000 viajeros confían en QuieroSIM para mantenerse conectados en todo momento.',
       reviews: [
-        { name: 'María Laura', handle: '@marilaura89', text: 'Increíble lo rápido que fue todo. Aterricé en Miami y ya tenía internet. Nada de cambiar chips.', location: 'Viaje a EE.UU.' },
+        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Uso QuieroSIM desde hace años en mis viajes y siempre es una excelente decisión. Funciona en todos lados súper rápido. Una vez necesité ayuda para instalarlo y el soporte me ayudó. Súper rápido y gentil.', location: 'Viaje a EE.UU.' },
         { name: 'Juan Cruz', handle: '@juan_viajero', text: 'El plan de 10GB en Europa me rindió perfecto. Y el soporte me ayudó enseguida cuando tuve una duda.', location: 'Viaje a España' },
         { name: 'Carolina M.', handle: '@carom_tech', text: 'Soy productora y necesito conectividad siempre. El roaming me arruinaba. QuieroSIM me salvó la vida en mi estadía en la gira en Chile.', location: 'Viaje a Chile' }
       ],
@@ -381,10 +382,11 @@ export const translations: Record<Language, any> = {
     },
     testimonials: {
       badge: 'Verified Reviews',
-      title: 'What travelers say',
+      title: 'Travelers who trust QuieroSIM',
+      verifiedBuyer: 'Verified buyer',
       subtitle: 'More than 10,000 travelers trust QuieroSIM to stay connected at all times.',
       reviews: [
-        { name: 'Maria Laura', handle: '@marilaura89', text: 'Incredible how fast everything was. I landed in Miami and already had internet. No chip swapping.', location: 'Trip to USA' },
+        { name: 'Karen Christensen', handle: '@karen_chris', text: 'I\'ve been using QuieroSIM for years on my trips and it\'s always an excellent decision. Works everywhere super fast. I once needed help installing it and support helped me out. Super fast and polite.', location: 'Trip to USA' },
         { name: 'Juan Cruz', handle: '@juan_viajero', text: 'The 10GB plan in Europe worked perfectly for me. And the support helped right away when I had a question.', location: 'Trip to Spain' },
         { name: 'Carolina M.', handle: '@carom_tech', text: 'I am a producer and I need connectivity always. Roaming was ruining me. QuieroSIM saved my life during my tour in Chile.', location: 'Trip to Chile' }
       ],
@@ -607,10 +609,11 @@ export const translations: Record<Language, any> = {
     },
     testimonials: {
       badge: 'Avaliações Verificadas',
-      title: 'O que dizem os viajantes',
+      title: 'Viajantes que confiam na QuieroSIM',
+      verifiedBuyer: 'Comprador verificado',
       subtitle: 'Mais de 10.000 viajantes confiam na QuieroSIM para se manterem conectados sempre.',
       reviews: [
-        { name: 'Maria Laura', handle: '@marilaura89', text: 'Incrível a rapidez de tudo. Pousei em Miami e já tinha internet. Nada de trocar chips.', location: 'Viagem aos EUA' },
+        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Uso a QuieroSIM há anos em minhas viagens e sempre é uma excelente decisão. Funciona em todos os lugares, super rápido. Uma vez precisei de ajuda para instalar e o suporte me ajudou. Super rápidos e gentis.', location: 'Viagem aos EUA' },
         { name: 'Juan Cruz', handle: '@juan_viajero', text: 'O plano de 10GB na Europa funcionou perfeitamente. O suporte me ajudou na hora quando tive uma dúvida.', location: 'Viagem para a Espanha' },
         { name: 'Carolina M.', handle: '@carom_tech', text: 'Trabalho como produtora e preciso sempre de conexão. O roaming estava estourando meu orçamento. A QuieroSIM me salvou no Chile.', location: 'Viagem ao Chile' }
       ],

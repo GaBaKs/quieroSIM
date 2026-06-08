@@ -127,10 +127,34 @@ export default function Navbar() {
         )}
         id="app-navbar"
       >
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-4 lg:gap-12 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
           
           {/* Col 1 — Logo, justify izquierda */}
-          <div className="flex items-center justify-start">
+          <div className="flex items-center justify-start gap-4 shrink-0">
+            {/* Hamburger Button (shows below lg) */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="flex lg:hidden flex-col justify-center items-center w-10 h-10 rounded-xl border border-[#9933c1]/20 bg-[#9933c1]/10 hover:bg-[#9933c1]/20 transition-colors cursor-pointer outline-none relative"
+              aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
+            >
+              <div className="flex flex-col gap-1.5 w-5">
+                <motion.span 
+                  animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
+                />
+                <motion.span 
+                  animate={isOpen ? { opacity: 0 } : { opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
+                />
+                <motion.span 
+                  animate={isOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
+                />
+              </div>
+            </button>
             <Link 
               href="/" 
               onClick={(e) => {
@@ -146,8 +170,8 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Col 2 — Links, centrados exactos */}
-          <div className="hidden lg:flex items-center gap-8">
+          {/* Col 2 — Links */}
+          <div className="hidden lg:flex items-center justify-center gap-4 xl:gap-6 flex-1 px-2 overflow-hidden">
             {navItems.map((item) => (
               <NavLink
                 key={item.id}
@@ -161,16 +185,23 @@ export default function Navbar() {
           </div>
 
           {/* Col 3 — Acciones, justify derecha */}
-          <div className="flex items-center gap-3 justify-end z-10">
+          <div className="flex items-center gap-3 justify-end z-10 shrink-0">
             {/* Desktop only Language switcher + CTA button */}
             <div className="hidden lg:flex items-center gap-4">
+              <Link
+                href="/admin/login"
+                className="px-4 py-2 rounded-full text-sm font-bold text-[#9933c1] bg-[#9933c1]/10 hover:bg-[#9933c1]/20 transition-all duration-200 whitespace-nowrap"
+              >
+                Acceder
+              </Link>
+
               <div className="lang-switcher relative">
                 {/* Trigger button */}
                 <button
                   onClick={() => setLangOpen(!langOpen)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium text-zinc-600 hover:text-black border border-zinc-200 hover:border-zinc-300 bg-black/5 hover:bg-black/10 transition-all duration-200 whitespace-nowrap cursor-pointer"
                 >
-                  <Globe className="h-3.5 w-3.5 text-[#b3ff6b]" />
+                  <Globe className="h-3.5 w-3.5 text-[#9933c1]" />
                   <span>{lang}</span>
                   <motion.span
                     animate={{ rotate: langOpen ? 180 : 0 }}
@@ -223,31 +254,6 @@ export default function Navbar() {
                 </QuieroButton>
               </Link>
             </div>
-
-            {/* Hamburger Button (shows below lg) */}
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="flex lg:hidden flex-col justify-center items-center w-10 h-10 rounded-xl border border-zinc-200 bg-black/5 hover:bg-black/10 transition-colors cursor-pointer outline-none relative text-[#b3ff6b]"
-              aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
-            >
-              <div className="flex flex-col gap-1.5 w-5">
-                <motion.span 
-                  animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-0.5 w-full bg-[#b3ff6b] rounded-full origin-center"
-                />
-                <motion.span 
-                  animate={isOpen ? { opacity: 0 } : { opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-0.5 w-full bg-[#b3ff6b] rounded-full origin-center"
-                />
-                <motion.span 
-                  animate={isOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="h-0.5 w-full bg-[#b3ff6b] rounded-full origin-center"
-                />
-              </div>
-            </button>
           </div>
 
         </div>
@@ -264,15 +270,15 @@ export default function Navbar() {
             className="fixed inset-x-0 top-[68px] z-45 lg:hidden border-b border-zinc-200 bg-white shadow-2xl max-h-[calc(100vh-68px)] overflow-y-auto"
             id="mobile-navigation-drawer"
           >
-            <div className="px-6 pt-4 pb-8 space-y-6">
-              <div className="flex flex-col gap-1">
+            <div className="px-4 pt-3 pb-6 space-y-4">
+              <div className="flex flex-col gap-0.5">
                 {navItems.map((item) => (
                   <Link
                     key={item.id}
                     href={`/#${item.id}`}
                     onClick={(e) => handleLinkClick(e, item.id)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-4 py-3.5 font-sans text-base font-semibold transition-colors whitespace-nowrap",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 font-sans text-sm font-semibold transition-colors whitespace-nowrap",
                       activeSection === item.id 
                         ? "bg-black/5 text-black underline underline-offset-4 decoration-[#b3ff6b] decoration-2" 
                         : "text-zinc-600 hover:bg-black/5 hover:text-black"
@@ -283,14 +289,24 @@ export default function Navbar() {
                 ))}
               </div>
 
+              <div className="px-2 pt-2 border-t border-zinc-100">
+                <Link
+                  href="/admin/login"
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-bold bg-[#9933c1]/10 text-[#9933c1] hover:bg-[#9933c1]/20 transition-all duration-200 mb-2"
+                >
+                  Acceder
+                </Link>
+              </div>
+
               {/* Mobile language selector buttons under the menu navigation */}
-              <div className="flex items-center gap-2 px-6 py-4 border-t border-zinc-100">
+              <div className="flex items-center gap-2 px-2 pb-2">
                 {(['ES', 'EN', 'PT'] as const).map((l) => (
                   <button
                     key={l}
                     onClick={() => setLang(l)}
                     className={cn(
-                      "flex-1 py-2 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer",
+                      "flex-1 py-1.5 rounded text-xs font-bold transition-all duration-200 cursor-pointer",
                       lang === l
                         ? "bg-[#b3ff6b] text-black"
                         : "bg-black/5 text-zinc-600 hover:bg-black/10 hover:text-black"
@@ -299,18 +315,6 @@ export default function Navbar() {
                     {l === 'ES' ? '🇦🇷 ES' : l === 'EN' ? '🇺🇸 EN' : '🇧🇷 PT'}
                   </button>
                 ))}
-              </div>
-
-              <div className="border-t border-white/10 pt-6 space-y-4">
-                <Link
-                  href="/#destinations-section"
-                  onClick={(e) => handleLinkClick(e, 'destinations-section')}
-                  className="block w-full"
-                >
-                  <QuieroButton variant="secondary" showArrow className="w-full font-black text-base py-3.5">
-                    {t('navbar.buyEsim')}
-                  </QuieroButton>
-                </Link>
               </div>
             </div>
           </motion.div>
