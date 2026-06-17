@@ -4,9 +4,21 @@ import { Menu, Sun, Moon } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from './ThemeProvider';
 import { motion, AnimatePresence } from 'motion/react';
+import type { AdminSubRole } from '@/server/types';
 
-export default function Topbar({ setIsOpen }: { setIsOpen: (val: boolean) => void }) {
+export default function Topbar({
+  setIsOpen,
+  email,
+  subRole,
+}: {
+  setIsOpen: (val: boolean) => void;
+  email?: string;
+  subRole?: AdminSubRole | null;
+}) {
   const { theme, toggleTheme } = useTheme();
+  const displayName = email || 'Admin';
+  const initial = displayName.charAt(0).toUpperCase();
+  const subRoleLabel = subRole === 'support_agent' ? 'Agente de Soporte' : 'Super Admin';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-x-4 border-b border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-md px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8 transition-colors duration-300">
@@ -62,13 +74,13 @@ export default function Topbar({ setIsOpen }: { setIsOpen: (val: boolean) => voi
           <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-zinc-200 lg:dark:bg-white/10" aria-hidden="true" />
 
           {/* Profile indicator */}
-          <div className="flex items-center gap-x-3 cursor-pointer group">
+          <div className="flex items-center gap-x-3 cursor-default group">
             <div className="h-9 w-9 rounded-full bg-[#9933c1] flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:scale-105 transition-transform">
-              A
+              {initial}
             </div>
             <span className="hidden lg:flex lg:flex-col lg:items-start">
-              <span className="text-sm font-bold leading-none text-zinc-900 dark:text-zinc-100 group-hover:text-[#9933c1] dark:group-hover:text-white transition-colors">Admin User</span>
-              <span className="text-xs font-medium text-[#9933c1] dark:text-[#b3ff6b] mt-1 tracking-widest uppercase">Super Admin</span>
+              <span className="text-sm font-bold leading-none text-zinc-900 dark:text-zinc-100 group-hover:text-[#9933c1] dark:group-hover:text-white transition-colors">{displayName}</span>
+              <span className="text-xs font-medium text-[#9933c1] dark:text-[#b3ff6b] mt-1 tracking-widest uppercase">{subRoleLabel}</span>
             </span>
           </div>
         </div>

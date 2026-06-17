@@ -6,19 +6,29 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import whiteGreyBg from '@/src/assets/images/whitegreybg.jpg';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
-import { compatibilityDevices } from '@/lib/data/esim-devices';
 
+export interface CompatibilityDeviceGroup {
+  brand: string;
+  models: string[];
+}
 
+interface CompatibilityProps {
+  /** Dispositivos compatibles agrupados por marca (vienen de la BD vía app/page.tsx). */
+  devices: CompatibilityDeviceGroup[];
+}
 
-export default function Compatibility() {
+export default function Compatibility({ devices }: CompatibilityProps) {
   const { fadeUp } = useScrollReveal();
   const [activeBrand, setActiveBrand] = useState('Apple');
   const [searchQuery, setSearchQuery] = useState('');
   const { t } = useLanguage();
 
+  // Mismo nombre que el viejo import estático: el resto del componente queda intacto.
+  const compatibilityDevices = devices;
+
   const brandModels = useMemo(() => {
     return compatibilityDevices.find(b => b.brand === activeBrand)?.models || [];
-  }, [activeBrand]);
+  }, [activeBrand, compatibilityDevices]);
 
   const searchResult = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -92,7 +102,7 @@ export default function Compatibility() {
       status: 'error',
       message: '🔍 No figura explícitamente en la lista rápida. Para estar totalmente seguro, marca *#06# en el teclado de llamadas de tu móvil y verifica si aparece un código EID de 32 dígitos.'
     };
-  }, [searchQuery]);
+  }, [searchQuery, compatibilityDevices]);
 
   return (
     <section 

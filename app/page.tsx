@@ -8,8 +8,14 @@ import Comparison from '@/components/sections/Comparison';
 import AboutUs from '@/components/sections/AboutUs';
 import Testimonials from '@/components/sections/Testimonials';
 import FAQ from '@/components/sections/FAQ';
+import { getCatalog, getSupportedDevices } from '@/server/services/catalog';
 
-export default function Home() {
+// ISR: el catálogo se revalida cada 30 min (el cron de sync corre a diario).
+export const revalidate = 1800;
+
+export default async function Home() {
+  const [catalog, devices] = await Promise.all([getCatalog(), getSupportedDevices()]);
+
   return (
     <div className="min-h-screen bg-white text-slate-850 antialiased flex flex-col justify-between" id="landing-page-root">
       {/* Header Navigation */}
@@ -19,8 +25,8 @@ export default function Home() {
       <main className="flex-grow">
         <Hero />
         <HowItWorks />
-        <Destinations />
-        <Compatibility />
+        <Destinations destinations={catalog.destinations} plansByDestination={catalog.plansByDestination} />
+        <Compatibility devices={devices} />
         <Comparison />
         <AboutUs />
         <Testimonials />

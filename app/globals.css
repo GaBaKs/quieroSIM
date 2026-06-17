@@ -1,6 +1,7 @@
-@import "tailwindcss";
-
+/* Los @import deben preceder a toda regla (Turbopack lo exige): la fuente va
+   antes que tailwindcss, que expande sus reglas en este punto. */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import "tailwindcss";
 
 :root {
   --color-lime:        #83ff00;   /* acento principal */

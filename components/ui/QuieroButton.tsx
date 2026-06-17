@@ -11,6 +11,7 @@ interface QuieroButtonProps {
   showArrow?: boolean;
   onClick?: () => void;
   type?: 'button' | 'submit';
+  disabled?: boolean;
 }
 
 export default function QuieroButton({
@@ -20,6 +21,7 @@ export default function QuieroButton({
   showArrow = false,
   onClick,
   type = 'button',
+  disabled = false,
 }: QuieroButtonProps) {
 
   const variants = {
@@ -76,10 +78,12 @@ export default function QuieroButton({
     <motion.button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       whileTap={{ scale: 0.98 }}
       style={{ borderRadius: '0.75em' }}
       className={cn(
         'group relative border-none cursor-pointer font-bold text-[15px] select-none p-0 outline-none inline-block align-middle',
+        disabled && 'opacity-60 pointer-events-none',
         v.wrapper,
         wrapperClasses.join(' ')
       )}

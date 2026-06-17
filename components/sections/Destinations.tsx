@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { destinations } from '@/lib/data/destinations';
-import { getPlansByDestinationId } from '@/lib/data/plans';
 import { Destination, Plan } from '@/lib/types';
 import { Search, MapPin, Sparkles, Shield, Tag, Calendar, HelpCircle, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,11 +10,18 @@ import QuieroButton from '../ui/QuieroButton';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translateFeature } from '@/lib/i18n/featureTranslator';
 
-export default function Destinations() {
+interface DestinationsProps {
+  /** Destinos activos con planes reales (vienen de la BD vía app/page.tsx). */
+  destinations: Destination[];
+  /** Planes por destination.id, ya mapeados a la forma de la UI. */
+  plansByDestination: Record<string, Plan[]>;
+}
+
+export default function Destinations({ destinations, plansByDestination }: DestinationsProps) {
   const { fadeUp } = useScrollReveal();
   const [selectedRegion, setSelectedRegion] = useState<'All' | 'Americas' | 'Europe' | 'Asia' | 'Africa' | 'Global'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDestId, setSelectedDestId] = useState('eeuu'); // pre-select USA
+  const [selectedDestId, setSelectedDestId] = useState(destinations[0]?.id ?? 'eeuu');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const { t, lang } = useLanguage();
@@ -35,7 +40,7 @@ export default function Destinations() {
       const matchesCode = dest.code.toLowerCase().includes(lowerQuery);
       return matchesRegion && (matchesName || matchesAlias || matchesCode);
     });
-  }, [selectedRegion, searchQuery, t]);
+  }, [selectedRegion, searchQuery, t, destinations]);
 
   // Find the selected active index
   const selectedIndex = useMemo(() => {
@@ -218,11 +223,12 @@ export default function Destinations() {
       return idx >= 0 ? filteredDestinations[idx] : filteredDestinations[0];
     }
     return destinations.find(d => d.id === selectedDestId) || destinations[0];
-  }, [filteredDestinations, selectedDestId]);
+  }, [filteredDestinations, selectedDestId, destinations]);
 
   const activePlans = useMemo(() => {
-    return getPlansByDestinationId(activeDestination.id, activeDestination.name);
-  }, [activeDestination]);
+    if (!activeDestination) return [];
+    return plansByDestination[activeDestination.id] ?? [];
+  }, [activeDestination, plansByDestination]);
 
   // Listen to search changes from Hero or localStorage
   useEffect(() => {
@@ -269,6 +275,9 @@ export default function Destinations() {
       window.removeEventListener('heroSearch', handleHeroSearch);
     };
   }, []);
+
+  // Catálogo vacío (BD sin planes activos): la sección no se renderiza.
+  if (!activeDestination) return null;
 
   const regionTabs = [
     { label: t('destinations.filterAll'), value: 'All' },

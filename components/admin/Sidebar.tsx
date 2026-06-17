@@ -19,27 +19,51 @@ import {
 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import { useTheme } from './ThemeProvider';
-import { useEffect, useState } from 'react';
+import { useMounted } from '@/hooks/use-mounted';
+import { useRouter } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import type { AdminSubRole } from '@/server/types';
 
+// `soon: true` = sección de Etapas 8–9 (cupones, afiliados, mayorista, etc.):
+// se muestra deshabilitada con un badge "Pronto", sin link.
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Órdenes', href: '/admin/orders', icon: ShoppingCart },
   { name: 'Usuarios', href: '/admin/users', icon: Users },
   { name: 'Planes', href: '/admin/plans', icon: Globe2 },
   { name: 'Cupones', href: '/admin/coupons', icon: Ticket },
-  { name: 'Afiliados', href: '/admin/affiliates', icon: Network },
-  { name: 'Mayoristas', href: '/admin/wholesale', icon: Building2 },
-  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon },
-  { name: 'Reportes', href: '/admin/reports', icon: BarChart3 },
-  { name: 'Configuración', href: '/admin/settings', icon: Settings },
+  { name: 'Afiliados', href: '/admin/affiliates', icon: Network, soon: true },
+  { name: 'Mayoristas', href: '/admin/wholesale', icon: Building2, soon: true },
+  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon, soon: true },
+  { name: 'Reportes', href: '/admin/reports', icon: BarChart3, superAdminOnly: true, soon: true },
+  { name: 'Configuración', href: '/admin/settings', icon: Settings, soon: true },
 ];
 
-export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (val: boolean) => void }) {
+export default function Sidebar({
+  isOpen,
+  setIsOpen,
+  subRole,
+}: {
+  isOpen: boolean;
+  setIsOpen: (val: boolean) => void;
+  subRole?: AdminSubRole | null;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
 
-  useEffect(() => setMounted(true), []);
+  // support_agent no ve secciones de finanzas (la seguridad real la da RLS).
+  const visibleNavigation = navigation.filter(
+    (item) => !item.superAdminOnly || subRole === 'super_admin',
+  );
+
+  const handleLogout = async () => {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace('/admin/login');
+    router.refresh();
+  };
 
   return (
     <>
@@ -74,16 +98,33 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
 
           {/* Navigation Links */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-            {navigation.map((item) => {
-              const isActive = pathname === item.href;
+            {visibleNavigation.map((item) => {
+              // Secciones de Etapas 8–9: deshabilitadas con badge "Pronto".
+              if (item.soon) {
+                return (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-zinc-300 dark:text-zinc-600 cursor-not-allowed select-none"
+                    title="Disponible próximamente"
+                  >
+                    <item.icon className="h-5 w-5 text-zinc-300 dark:text-zinc-600" />
+                    <span>{item.name}</span>
+                    <span className="ml-auto rounded-full bg-zinc-100 dark:bg-white/5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                      Pronto
+                    </span>
+                  </div>
+                );
+              }
+              const isActive = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => setIsOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors",
-                    isActive 
-                      ? "bg-[#9933c1]/10 dark:bg-[#9933c1]/20 text-[#9933c1] dark:text-[#b3ff6b]" 
+                    isActive
+                      ? "bg-[#9933c1]/10 dark:bg-[#9933c1]/20 text-[#9933c1] dark:text-[#b3ff6b]"
                       : "text-zinc-500 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-zinc-100"
                   )}
                 >
@@ -96,13 +137,14 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean; setIsO
 
           {/* Bottom Logout Area */}
           <div className="p-4 border-t border-zinc-200 dark:border-white/10">
-            <Link 
-              href="/admin/login"
+            <button
+              type="button"
+              onClick={handleLogout}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 transition-colors w-full"
             >
               <LogOut className="h-5 w-5" />
               Cerrar Sesión
-            </Link>
+            </button>
           </div>
         </div>
       </div>

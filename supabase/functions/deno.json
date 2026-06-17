@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "stripe": "npm:stripe@22.2.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "qrcode": "npm:qrcode@1.5.4"
+  }
+}

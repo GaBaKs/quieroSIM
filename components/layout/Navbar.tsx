@@ -189,10 +189,10 @@ export default function Navbar() {
             {/* Desktop only Language switcher + CTA button */}
             <div className="hidden lg:flex items-center gap-4">
               <Link
-                href="/admin/login"
+                href="/account"
                 className="px-4 py-2 rounded-full text-sm font-bold text-[#9933c1] bg-[#9933c1]/10 hover:bg-[#9933c1]/20 transition-all duration-200 whitespace-nowrap"
               >
-                Acceder
+                {t('navbar.account')}
               </Link>
 
               <div className="lang-switcher relative">
@@ -291,11 +291,11 @@ export default function Navbar() {
 
               <div className="px-2 pt-2 border-t border-zinc-100">
                 <Link
-                  href="/admin/login"
+                  href="/account"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center justify-center rounded-lg py-2.5 text-sm font-bold bg-[#9933c1]/10 text-[#9933c1] hover:bg-[#9933c1]/20 transition-all duration-200 mb-2"
                 >
-                  Acceder
+                  {t('navbar.account')}
                 </Link>
               </div>
 
