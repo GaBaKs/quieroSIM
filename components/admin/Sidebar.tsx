@@ -32,11 +32,11 @@ const navigation = [
   { name: 'Usuarios', href: '/admin/users', icon: Users },
   { name: 'Planes', href: '/admin/plans', icon: Globe2 },
   { name: 'Cupones', href: '/admin/coupons', icon: Ticket },
-  { name: 'Afiliados', href: '/admin/affiliates', icon: Network, soon: true },
-  { name: 'Mayoristas', href: '/admin/wholesale', icon: Building2, soon: true },
-  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon, soon: true },
-  { name: 'Reportes', href: '/admin/reports', icon: BarChart3, superAdminOnly: true, soon: true },
-  { name: 'Configuración', href: '/admin/settings', icon: Settings, soon: true },
+  { name: 'Afiliados', href: '/admin/affiliates', icon: Network },
+  { name: 'Mayoristas', href: '/admin/wholesale', icon: Building2 },
+  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon },
+  { name: 'Reportes', href: '/admin/reports', icon: BarChart3, superAdminOnly: true },
+  { name: 'Configuración', href: '/admin/settings', icon: Settings, superAdminOnly: true },
 ];
 
 export default function Sidebar({
@@ -99,22 +99,7 @@ export default function Sidebar({
           {/* Navigation Links */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
             {visibleNavigation.map((item) => {
-              // Secciones de Etapas 8–9: deshabilitadas con badge "Pronto".
-              if (item.soon) {
-                return (
-                  <div
-                    key={item.name}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-zinc-300 dark:text-zinc-600 cursor-not-allowed select-none"
-                    title="Disponible próximamente"
-                  >
-                    <item.icon className="h-5 w-5 text-zinc-300 dark:text-zinc-600" />
-                    <span>{item.name}</span>
-                    <span className="ml-auto rounded-full bg-zinc-100 dark:bg-white/5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                      Pronto
-                    </span>
-                  </div>
-                );
-              }
+
               const isActive = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
               return (
                 <Link

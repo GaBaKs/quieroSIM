@@ -30,7 +30,7 @@ function NavLink({ href, label, sectionId, activeSection, onClick }: NavLinkProp
         "absolute bottom-0 left-0 h-[2px] w-full rounded-full",
         "bg-[#b3ff6b] origin-left",
         "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        activeSection === sectionId 
+        activeSection === sectionId
           ? "scale-x-100" // activo por scroll spy
           : "scale-x-0 group-hover:scale-x-100" // hover
       )} />
@@ -69,14 +69,14 @@ export default function Navbar() {
   // Scroll spy to highlight active section link
   useEffect(() => {
     const sections = [
-      'destinations-section', 
-      'how-it-works-section', 
-      'compatibility-section', 
+      'destinations-section',
+      'how-it-works-section',
+      'compatibility-section',
       'about',
-      'testimonials-section', 
+      'testimonials-section',
       'faq-section'
     ];
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -118,17 +118,17 @@ export default function Navbar() {
 
   return (
     <>
-      <header 
+      <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-          scrolled 
-            ? "bg-white/90 backdrop-blur-xl border-b border-zinc-200 py-3 shadow-sm" 
+          scrolled
+            ? "bg-white/90 backdrop-blur-xl border-b border-zinc-200 py-3 shadow-sm"
             : "bg-transparent py-5"
         )}
         id="app-navbar"
       >
         <div className="flex items-center justify-between gap-4 lg:gap-12 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-          
+
           {/* Col 1 — Logo, justify izquierda */}
           <div className="flex items-center justify-start gap-4 shrink-0">
             {/* Hamburger Button (shows below lg) */}
@@ -138,25 +138,25 @@ export default function Navbar() {
               aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
             >
               <div className="flex flex-col gap-1.5 w-5">
-                <motion.span 
+                <motion.span
                   animate={isOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
                   transition={{ duration: 0.2 }}
                   className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
                 />
-                <motion.span 
+                <motion.span
                   animate={isOpen ? { opacity: 0 } : { opacity: 1 }}
                   transition={{ duration: 0.2 }}
                   className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
                 />
-                <motion.span 
+                <motion.span
                   animate={isOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
                   transition={{ duration: 0.2 }}
                   className="h-0.5 w-full bg-[#9933c1] rounded-full origin-center"
                 />
               </div>
             </button>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               onClick={(e) => {
                 e.preventDefault();
                 setIsOpen(false);
@@ -245,9 +245,9 @@ export default function Navbar() {
                 href="/#destinations-section"
                 onClick={(e) => handleLinkClick(e, 'destinations-section')}
               >
-                <QuieroButton 
-                  variant="secondary" 
-                  showArrow 
+                <QuieroButton
+                  variant="secondary"
+                  showArrow
                   className="py-2 px-5 text-sm font-black whitespace-nowrap"
                 >
                   {t('navbar.buyEsim')}
@@ -279,8 +279,8 @@ export default function Navbar() {
                     onClick={(e) => handleLinkClick(e, item.id)}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 font-sans text-sm font-semibold transition-colors whitespace-nowrap",
-                      activeSection === item.id 
-                        ? "bg-black/5 text-black underline underline-offset-4 decoration-[#b3ff6b] decoration-2" 
+                      activeSection === item.id
+                        ? "bg-black/5 text-black underline underline-offset-4 decoration-[#b3ff6b] decoration-2"
                         : "text-zinc-600 hover:bg-black/5 hover:text-black"
                     )}
                   >

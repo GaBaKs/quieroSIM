@@ -9,6 +9,7 @@ import CheckoutModal from '@/components/CheckoutModal';
 import QuieroButton from '../ui/QuieroButton';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translateFeature } from '@/lib/i18n/featureTranslator';
+import Globe from '@/components/ui/Globe';
 
 interface DestinationsProps {
   /** Destinos activos con planes reales (vienen de la BD vía app/page.tsx). */
@@ -16,6 +17,31 @@ interface DestinationsProps {
   /** Planes por destination.id, ya mapeados a la forma de la UI. */
   plansByDestination: Record<string, Plan[]>;
 }
+
+const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'US': { lat: 38, lng: -97 },
+  'ES': { lat: 32, lng: -5 },
+  'FR': { lat: 45, lng: 2 },
+  'IT': { lat: 30, lng: 25 },
+  'GB': { lat: 65, lng: -15 },
+  'MX': { lat: 23, lng: -102 },
+  'BR': { lat: -14, lng: -51 },
+  'JP': { lat: 36, lng: 138 },
+  'DE': { lat: 58, lng: 25 },
+  'CO': { lat: 4, lng: -74 },
+  'PE': { lat: -9, lng: -75 },
+  'CL': { lat: -35, lng: -71 },
+  'AR': { lat: -38, lng: -63 },
+  'UY': { lat: -32, lng: -55 },
+  'PT': { lat: 28, lng: -25 },
+  'NL': { lat: 62, lng: 10 },
+  'CH': { lat: 42, lng: 15 },
+  'CA': { lat: 56, lng: -106 },
+  'AU': { lat: -25, lng: 133 },
+  'AE': { lat: 23, lng: 54 },
+  'EU': { lat: 48, lng: 35 }, // Europa regional
+  'GLOBAL': { lat: 0, lng: 0 }
+};
 
 export default function Destinations({ destinations, plansByDestination }: DestinationsProps) {
   const { fadeUp } = useScrollReveal();
@@ -28,6 +54,31 @@ export default function Destinations({ destinations, plansByDestination }: Desti
 
   // Filtered list of destinations
   const filteredDestinations = useMemo(() => {
+    // Mapa de ciudades famosas para mejorar la búsqueda sin depender solo de la base de datos
+    const cityAliases: Record<string, string[]> = {
+      'Estados Unidos': ['miami', 'orlando', 'nueva york', 'new york', 'los angeles', 'las vegas', 'chicago', 'san francisco', 'boston', 'washington', 'houston', 'dallas', 'atlanta'],
+      'España': ['madrid', 'barcelona', 'ibiza', 'sevilla', 'valencia', 'mallorca', 'malaga', 'bilbao', 'granada', 'tenerife', 'canarias'],
+      'Francia': ['paris', 'niza', 'lyon', 'marsella', 'toulouse', 'burdeos', 'cannes'],
+      'Italia': ['roma', 'milan', 'venecia', 'florencia', 'napoles', 'amalfi', 'sicilia', 'turin', 'pisa'],
+      'Reino Unido': ['londres', 'edimburgo', 'london', 'manchester', 'liverpool', 'belfast', 'glasgow'],
+      'México': ['cancun', 'cdmx', 'mexico df', 'tulum', 'playa del carmen', 'monterrey', 'guadalajara', 'puerto vallarta', 'los cabos'],
+      'Brasil': ['rio de janeiro', 'sao paulo', 'san pablo', 'buzios', 'florianopolis', 'salvador', 'fortaleza', 'recife', 'curitiba'],
+      'Japón': ['tokio', 'tokyo', 'kyoto', 'osaka', 'hiroshima', 'sapporo', 'nara'],
+      'Alemania': ['berlin', 'munich', 'frankfurt', 'hamburgo', 'colonia', 'stuttgart'],
+      'Colombia': ['bogota', 'medellin', 'cartagena', 'san andres', 'cali', 'barranquilla', 'santa marta'],
+      'Perú': ['lima', 'cusco', 'machu picchu', 'arequipa', 'mancora', 'piura'],
+      'Chile': ['santiago', 'valparaiso', 'viña del mar', 'atacama', 'puerto montt', 'punta arenas'],
+      'Argentina': ['buenos aires', 'bariloche', 'mendoza', 'mar del plata', 'cordoba', 'rosario', 'ushuaia', 'calafate', 'salta', 'iguazu'],
+      'Uruguay': ['montevideo', 'punta del este', 'colonia'],
+      'Portugal': ['lisboa', 'oporto', 'faro', 'madeira'],
+      'Países Bajos': ['amsterdam', 'rotterdam', 'la haya'],
+      'Suiza': ['zurich', 'ginebra', 'basilea', 'lucerna', 'berna'],
+      'Canadá': ['toronto', 'vancouver', 'montreal', 'quebec', 'ottawa', 'calgary'],
+      'Australia': ['sydney', 'melbourne', 'brisbane', 'perth', 'gold coast'],
+      'Emiratos Árabes Unidos': ['dubai', 'abu dhabi'],
+      'Europa Regional': ['europa', 'euro', 'schengen']
+    };
+
     return destinations.filter(dest => {
       const matchesRegion = selectedRegion === 'All' || dest.region === selectedRegion;
       const lowerQuery = searchQuery.toLowerCase();
@@ -35,8 +86,11 @@ export default function Destinations({ destinations, plansByDestination }: Desti
       const translatedName = t(`countries.${dest.name}`);
       const actualTranslatedName = translatedName.startsWith('countries.') ? dest.name : translatedName;
       
+      const extraAliases = cityAliases[dest.name] || [];
+      const combinedAliases = [...(dest.searchAliases || []), ...extraAliases];
+      
       const matchesName = dest.name.toLowerCase().includes(lowerQuery) || actualTranslatedName.toLowerCase().includes(lowerQuery);
-      const matchesAlias = dest.searchAliases ? dest.searchAliases.some(alias => alias.toLowerCase().includes(lowerQuery)) : false;
+      const matchesAlias = combinedAliases.some(alias => alias.toLowerCase().includes(lowerQuery));
       const matchesCode = dest.code.toLowerCase().includes(lowerQuery);
       return matchesRegion && (matchesName || matchesAlias || matchesCode);
     });
@@ -230,6 +284,51 @@ export default function Destinations({ destinations, plansByDestination }: Desti
     return plansByDestination[activeDestination.id] ?? [];
   }, [activeDestination, plansByDestination]);
 
+  const globeMarkers = useMemo(() => {
+    return destinations
+      .map(dest => {
+        const coords = COUNTRY_COORDINATES[dest.code];
+        if (!coords) return null;
+        return {
+          lat: coords.lat,
+          lng: coords.lng,
+          label: dest.code
+        };
+      })
+      .filter(Boolean) as { lat: number; lng: number; label?: string }[];
+  }, [destinations]);
+
+  const globeConnections = useMemo(() => {
+    const connections: { from: [number, number]; to: [number, number] }[] = [];
+    const activeCoords = COUNTRY_COORDINATES[activeDestination.code];
+    
+    if (!activeCoords || (activeCoords.lat === 0 && activeCoords.lng === 0)) {
+      if (globeMarkers.length >= 2) {
+        for (let i = 0; i < Math.min(8, globeMarkers.length); i++) {
+           const from = globeMarkers[i];
+           const to = globeMarkers[(i + 3) % globeMarkers.length];
+           connections.push({ from: [from.lat, from.lng], to: [to.lat, to.lng] });
+        }
+      }
+      return connections;
+    }
+
+    const others = globeMarkers.filter(
+      m => Math.abs(m.lat - activeCoords.lat) > 1 || Math.abs(m.lng - activeCoords.lng) > 1
+    );
+    
+    const maxConns = Math.min(5, others.length);
+    for (let i = 0; i < maxConns; i++) {
+      const idx = Math.floor((i * others.length) / maxConns);
+      connections.push({
+        from: [activeCoords.lat, activeCoords.lng],
+        to: [others[idx].lat, others[idx].lng]
+      });
+    }
+
+    return connections;
+  }, [globeMarkers, activeDestination.code]);
+
   // Listen to search changes from Hero or localStorage
   useEffect(() => {
     const checkStorage = () => {
@@ -358,77 +457,90 @@ export default function Destinations({ destinations, plansByDestination }: Desti
         {/* ---------------------------------------------------- */}
         {/* NEW HORIZONTAL TIMELINE CAROUSEL OF DESTINATIONS */}
         {/* ---------------------------------------------------- */}
-        <div className="relative max-w-4xl mx-auto mb-16">
-          {/* Subtle fade edges to cover the overflow area */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-white to-transparent pointer-events-none z-10" />
-          <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-white to-transparent pointer-events-none z-10" />
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 max-w-6xl mx-auto mb-16">
+          
+          <div className="relative w-full lg:w-[60%] shrink-0">
+            {/* Subtle fade edges to cover the overflow area */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-white to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-white to-transparent pointer-events-none z-10" />
 
-          {/* Viewport frame containing the drag-to-scroll track */}
-          <div 
-            ref={scrollRef}
-            className="w-full overflow-x-auto overflow-y-hidden h-40 flex items-center px-4 scrollbar-none no-scrollbar cursor-grab active:cursor-grabbing"
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-          >
+            {/* Viewport frame containing the drag-to-scroll track */}
             <div 
-              className="flex items-center w-max h-full px-4 sm:px-12"
-              style={{ gap: `${GAP}px` }}
+              ref={scrollRef}
+              className="w-full overflow-x-auto overflow-y-hidden h-40 flex items-center px-4 scrollbar-none no-scrollbar cursor-grab active:cursor-grabbing"
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
             >
-              {infiniteDestinations.length > 0 ? (
-                infiniteDestinations.map((dest, i) => {
-                  const isSelected = selectedDestId === dest.id;
-                  
-                  return (
-                    <button
-                      key={`${dest.id}-${dest._copyIdx}-${i}`}
-                      data-id={dest.id}
-                      onClick={handleDestinationClick}
-                      type="button"
-                      className={`flex flex-col items-center justify-center shrink-0 h-32 rounded-2xl border transition-all duration-300 ${
-                        isSelected
-                          ? 'border-[#9933c1] bg-[#9933c1]/10 text-zinc-900 shadow-[0_0_24px_rgba(153,51,193,0.15)] scale-110 z-10'
-                          : 'border-black/5 bg-[#fafafa] text-zinc-500 opacity-80 hover:opacity-100 hover:border-black/10 hover:bg-[#f0f0f0] scale-100'
-                      }`}
-                      style={{ width: `${ITEM_WIDTH}px` }}
-                    >
-                      {/* Flag Image or Emoji */}
-                      {dest.code.length <= 2 ? (
-                        <img 
-                          src={`https://flagcdn.com/w80/${dest.code.toLowerCase()}.png`} 
-                          alt={t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)} 
-                          className="h-7 w-10 object-cover rounded shadow-md mb-2 shrink-0 select-none border border-white/5 pointer-events-none"
-                        />
-                      ) : (
-                        <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] select-none mb-1.5 relative -top-0.5 pointer-events-none">
-                          {dest.flag}
+              <div 
+                className="flex items-center w-max h-full px-4 sm:px-12"
+                style={{ gap: `${GAP}px` }}
+              >
+                {infiniteDestinations.length > 0 ? (
+                  infiniteDestinations.map((dest, i) => {
+                    const isSelected = selectedDestId === dest.id;
+                    
+                    return (
+                      <button
+                        key={`${dest.id}-${dest._copyIdx}-${i}`}
+                        data-id={dest.id}
+                        onClick={handleDestinationClick}
+                        type="button"
+                        className={`flex flex-col items-center justify-center shrink-0 h-32 rounded-2xl border transition-all duration-300 ${
+                          isSelected
+                            ? 'border-[#9933c1] bg-[#9933c1]/10 text-zinc-900 shadow-[0_0_24px_rgba(153,51,193,0.15)] scale-110 z-10'
+                            : 'border-black/5 bg-[#fafafa] text-zinc-500 opacity-80 hover:opacity-100 hover:border-black/10 hover:bg-[#f0f0f0] scale-100'
+                        }`}
+                        style={{ width: `${ITEM_WIDTH}px` }}
+                      >
+                        {/* Flag Image or Emoji */}
+                        {dest.code.length <= 2 ? (
+                          <img 
+                            src={`https://flagcdn.com/w80/${dest.code.toLowerCase()}.png`} 
+                            alt={t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)} 
+                            className="h-7 w-10 object-cover rounded shadow-md mb-2 shrink-0 select-none border border-white/5 pointer-events-none"
+                          />
+                        ) : (
+                          <span className="text-3xl filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] select-none mb-1.5 relative -top-0.5 pointer-events-none">
+                            {dest.flag}
+                          </span>
+                        )}
+                        {/* Code abbreviation */}
+                        <span className="font-black text-sm tracking-widest text-[#9933c1] pointer-events-none">
+                          {dest.code}
                         </span>
-                      )}
-                      {/* Code abbreviation */}
-                      <span className="font-black text-sm tracking-widest text-[#9933c1] pointer-events-none">
-                        {dest.code}
-                      </span>
-                      {/* Name snippet truncated */}
-                      <span className="font-sans font-bold text-[10px] text-center px-1 truncate max-w-full text-zinc-800 pointer-events-none">
-                        {t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)}
-                      </span>
+                        {/* Name snippet truncated */}
+                        <span className="font-sans font-bold text-[10px] text-center px-1 truncate max-w-full text-zinc-800 pointer-events-none">
+                          {t(`countries.${dest.name}`).startsWith('countries.') ? dest.name : t(`countries.${dest.name}`)}
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center shrink-0 py-4 text-center text-zinc-500 w-full h-full min-w-[300px]">
+                    <p className="font-sans text-sm font-medium">{t('destinations.noResults')} &quot;{searchQuery}&quot;</p>
+                    <button 
+                      onClick={() => { setSearchQuery(''); setSelectedRegion('All'); }}
+                      type="button"
+                      className="text-xs font-bold text-[#9933c1] underline cursor-pointer mt-1"
+                    >
+                      {t('destinations.filterAll')}
                     </button>
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center shrink-0 py-4 text-center text-zinc-500 w-full h-full min-w-[300px]">
-                  <p className="font-sans text-sm font-medium">{t('destinations.noResults')} &quot;{searchQuery}&quot;</p>
-                  <button 
-                    onClick={() => { setSearchQuery(''); setSelectedRegion('All'); }}
-                    type="button"
-                    className="text-xs font-bold text-[#9933c1] underline cursor-pointer mt-1"
-                  >
-                    {t('destinations.filterAll')}
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Interactive Globe Container */}
+          <div className="w-full lg:w-[40%] flex justify-center items-center shrink-0">
+            <Globe 
+              size={320} 
+              focusCoordinates={COUNTRY_COORDINATES[activeDestination.code] || COUNTRY_COORDINATES['GLOBAL']} 
+              markers={globeMarkers}
+              connections={globeConnections}
+            />
           </div>
         </div>
 

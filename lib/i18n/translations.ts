@@ -42,14 +42,12 @@ export const translations: Record<Language, any> = {
     },
     aboutUs: {
       title: 'Quiénes Somos',
-      name: 'Felipe Babenco',
-      role: 'CEO & Co-Founder',
-      p1: 'Emprendedor argentino y fundador de múltiples proyectos vinculados a tecnología, logística y experiencias para viajeros.',
-      p2: 'Felipe es también cofundador de ',
-      tuTraslado: 'Tu Traslado',
-      p2_2: ', una de las empresas de transporte para eventos y turismo más reconocidas de Argentina, movilizando miles de pasajeros en festivales, recitales y experiencias de viaje en todo el país.',
-      p3: 'Con una fuerte visión comercial y enfoque en experiencia de usuario, lidera el desarrollo estratégico de QUIERO con el objetivo de construir una marca global de conectividad digital para viajeros.',
-      photoPlaceholder: 'FOTO PROFESIONAL'
+      name: 'Felipe Babenco, Ezequiel Segovia e Ignacio Raffin',
+      role: 'Fundadores',
+      p1: 'Felipe Babenco, Ezequiel Segovia e Ignacio Raffin son socios desde 2012 y cofundadores de Tu Traslado SRL, la plataforma número 1 en Argentina en traslados a eventos masivos, con miles de pasajeros movilizados en festivales, recitales y experiencias de viaje en todo el país.',
+      p2: 'A lo largo de más de una década construyeron una empresa basada en tecnología, obsesión por la experiencia del usuario y una cultura de mejora continua. Ser líderes del mercado nunca fue un punto de llegada: siempre fue el punto de partida para el siguiente desafío.',
+      p3: 'Esa misma visión los llevó a fundar QuieroSIM: una solución global de conectividad digital pensada para los viajeros del mundo. Porque si algo aprendieron gestionando millones de traslados, es que la experiencia de viajar empieza mucho antes de llegar al destino.',
+      photoPlaceholder: 'FOTO FUNDADORES'
     },
     hero: {
       slogan: 'Internet para Viajar',
@@ -354,14 +352,12 @@ export const translations: Record<Language, any> = {
     },
     aboutUs: {
       title: 'About Us',
-      name: 'Felipe Babenco',
-      role: 'CEO & Co-Founder',
-      p1: 'Argentine entrepreneur and founder of multiple projects linked to technology, logistics and travel experiences.',
-      p2: 'Felipe is also a co-founder of ',
-      tuTraslado: 'Tu Traslado',
-      p2_2: ', one of the most recognized transport companies for events and tourism in Argentina, mobilizing thousands of passengers in festivals, concerts, and travel experiences throughout the country.',
-      p3: 'With a strong commercial vision and focus on user experience, he leads the strategic development of QUIERO aiming to build a global brand for travelers\' digital connectivity.',
-      photoPlaceholder: 'PROFESSIONAL PHOTO'
+      name: 'Felipe Babenco, Ezequiel Segovia & Ignacio Raffin',
+      role: 'Founders',
+      p1: 'Felipe Babenco, Ezequiel Segovia, and Ignacio Raffin have been partners since 2012 and co-founders of Tu Traslado SRL, the number 1 platform in Argentina for transfers to massive events, with thousands of passengers mobilized in festivals, concerts, and travel experiences throughout the country.',
+      p2: 'Over more than a decade, they built a company based on technology, an obsession with user experience, and a culture of continuous improvement. Being market leaders was never an arrival point: it was always the starting point for the next challenge.',
+      p3: 'That same vision led them to found QuieroSIM: a global digital connectivity solution designed for travelers around the world. Because if there is one thing they learned managing millions of transfers, it is that the travel experience starts long before arriving at the destination.',
+      photoPlaceholder: 'FOUNDERS PHOTO'
     },
     hero: {
       slogan: 'Internet for Travel',
@@ -666,14 +662,12 @@ export const translations: Record<Language, any> = {
     },
     aboutUs: {
       title: 'Quem Somos',
-      name: 'Felipe Babenco',
-      role: 'CEO & Co-Founder',
-      p1: 'Empreendedor argentino e fundador de múltiplos projetos vinculados a tecnologia, logística e experiências para viajantes.',
-      p2: 'Felipe também é cofundador da ',
-      tuTraslado: 'Tu Traslado',
-      p2_2: ', uma das empresas de transporte para eventos e turismo mais reconhecidas da Argentina, mobilizando milhares de passageiros em festivais, shows e experiências de viagem em todo o país.',
-      p3: 'Com forte visão comercial e foco na experiência do usuário, lidera o desenvolvimento estratégico da QUIERO com o objetivo de construir uma marca global de conectividade digital para viajantes.',
-      photoPlaceholder: 'FOTO PROFISSIONAL'
+      name: 'Felipe Babenco, Ezequiel Segovia e Ignacio Raffin',
+      role: 'Fundadores',
+      p1: 'Felipe Babenco, Ezequiel Segovia e Ignacio Raffin são sócios desde 2012 e cofundadores da Tu Traslado SRL, a plataforma número 1 na Argentina em traslados para eventos de massa, com milhares de passageiros mobilizados em festivais, shows e experiências de viagem em todo o país.',
+      p2: 'Ao longo de mais de uma década, construíram uma empresa baseada em tecnologia, obsessão pela experiência do usuário e uma cultura de melhoria contínua. Ser líderes de mercado nunca foi um ponto de chegada: sempre foi o ponto de partida para o próximo desafio.',
+      p3: 'Essa mesma visão os levou a fundar a QuieroSIM: uma solução global de conectividade digital pensada para os viajantes do mundo. Porque se há algo que aprenderam gerenciando milhões de traslados, é que a experiência de viajar começa muito antes de chegar ao destino.',
+      photoPlaceholder: 'FOTO FUNDADORES'
     },
     hero: {
       slogan: 'Internet para Viajar',

@@ -1,7 +1,8 @@
 # Planning — Panel de Administración QuieroSIM
 > Stack: Next.js 14+ · Supabase · API YeSim · Stripe
 > Scope: Solo panel de administración (la landing ya existe)
-> Versión: 1.0 — basada en RF v1.1
+> Versión: 2.0 — basada en RF v1.1 + auditoría del código actual
+> Progreso: se registra en `tasks.md`
 
 ---
 
@@ -19,272 +20,220 @@ El panel sigue la guía de diseño de QuieroSIM:
 
 ---
 
-## Fase 1 — Estructura base y navegación del admin
+## Estado actual — Inventario de lo existente
 
-**Objetivo:** Levantar el shell del panel: layout, sidebar, routing y autenticación de roles.
+### ✅ Ya implementado (lógica + diseño)
 
-### 1.1 Layout del panel
-- [ ] Crear ruta `/admin` con layout dedicado (sidebar + topbar)
-- [ ] Sidebar con íconos y etiquetas: Dashboard, Órdenes, Usuarios, Planes, Cupones, Afiliados, Mayoristas, Soporte, Reportes, Configuración
-- [ ] Topbar con avatar, nombre del admin y botón de logout
-- [ ] Responsive: sidebar colapsable en mobile (drawer)
-- [ ] Aplicar paleta oscura: fondo `#18181b`, sidebar en `bg-zinc-900`, texto `text-zinc-100`
-- [ ] Bordes sutiles `border-white/10` entre secciones
-- [ ] Transiciones de ruta con Framer Motion (`AnimatePresence`)
+| Módulo | Archivos clave | Estado |
+|---|---|---|
+| Layout admin (sidebar + topbar + tema) | `AdminShell.tsx`, `Sidebar.tsx`, `Topbar.tsx`, `ThemeProvider.tsx` | Completo |
+| Login admin (dark, bypass temporal) | `app/admin/login/page.tsx` | Completo (sin Supabase Auth real) |
+| Guard de sesión + roles | `app/admin/(panel)/layout.tsx`, `proxy.ts`, `server/lib/auth.ts` | Lógica conectada a Supabase |
+| Dashboard con KPIs | `DashboardView.tsx`, `admin-dashboard.ts` | Lógica conectada, diseño listo |
+| Listado de órdenes con filtros + paginación | `app/admin/(panel)/orders/page.tsx`, `OrderFilters.tsx`, `admin-orders.ts` | Lógica conectada, diseño listo |
+| Detalle de orden | `app/admin/(panel)/orders/[id]/page.tsx`, `OrderDetailView.tsx` | Lógica conectada, diseño listo |
+| Listado de usuarios con búsqueda + paginación | `app/admin/(panel)/users/page.tsx`, `UserSearch.tsx`, `admin-users.ts` | Lógica conectada, diseño listo |
+| Detalle de usuario | `app/admin/(panel)/users/[id]/page.tsx`, `UserDetailView.tsx` | Lógica conectada, diseño listo |
+| Gestión de planes (listado + edición inline) | `app/admin/(panel)/plans/page.tsx`, `PlansView.tsx`, `admin-plans.ts` | Lógica conectada, diseño listo |
+| Gestión de cupones (CRUD completo) | `app/admin/(panel)/coupons/page.tsx`, `CouponsView.tsx`, `admin-coupons.ts` | Lógica conectada, diseño listo |
+| StatusBadge, ConfirmDialog, format helpers | `StatusBadge.tsx`, `ConfirmDialog.tsx`, `format.ts` | Componentes utilitarios completos |
+| Sidebar con ítems por rol | `Sidebar.tsx` (filtra por `superAdminOnly`) | Funcional |
+| Navegación landing ↔ admin ↔ account | `Navbar.tsx`, `Topbar.tsx`, `account/layout.tsx` | Botones Acceder / Vista Usuario / Ver Web |
 
-### 1.2 Autenticación y roles
-- `TODO → tasks.md #AUTH-01` Proteger rutas `/admin/*` con middleware de Supabase Auth
-- `TODO → tasks.md #AUTH-02` Verificar rol del usuario (Super Admin / Agente de Soporte) vía RLS
-- `TODO → tasks.md #AUTH-03` Redirigir a login si sesión expirada
-- `TODO → tasks.md #AUTH-04` Mostrar/ocultar ítems del sidebar según rol (Agente no ve sección Reportes ni Finanzas)
+### 🔲 Sin implementar (sidebar dice "Pronto")
 
-### 1.3 Página de login del admin
-- [ ] Formulario de email + contraseña con estética dark
-- [ ] Botón `QuieroButton` en violeta
-- [ ] Logo QuieroSIM centrado, fondo con gradiente `from-[#18181b] to-black`
-- `TODO → tasks.md #AUTH-05` Conectar con Supabase Auth
-
----
-
-## Fase 2 — Dashboard principal
-
-**Objetivo:** Vista de métricas clave (RF-ADM-01).
-
-### 2.1 Tarjetas de KPIs
-- [ ] 4 cards superiores: Ventas del día, Ventas del mes, Total órdenes, Ingresos
-- [ ] Cards con fondo `bg-zinc-900`, borde `border-white/10`, radio `rounded-2xl`
-- [ ] Badge de variación (↑/↓ respecto al día/mes anterior) en `#b3ff6b` o rojo según tendencia
-- [ ] Animación fadeUp en cascada con Framer Motion al montar
-- `TODO → tasks.md #DASH-01` Conectar cards con queries a Supabase (ventas, órdenes, ingresos)
-
-### 2.2 Gráfico de ventas
-- [ ] Gráfico de línea o barras (últimos 30 días)
-- [ ] Estética: fondo transparente, línea en `#9933c1`, área rellena con `#9933c1/20`
-- [ ] Ejes y grilla en `text-zinc-500`
-- `TODO → tasks.md #DASH-02` Alimentar gráfico con datos reales de Supabase
-
-### 2.3 Planes más vendidos
-- [ ] Tabla o lista top 5 con badge de posición en `#b3ff6b`
-- [ ] Columnas: Plan, País/Región, Unidades vendidas, Ingresos
-- `TODO → tasks.md #DASH-03` Query agregada de órdenes por plan
-
-### 2.4 Estado del sistema
-- [ ] Sección de estado: YeSim API, Stripe, WhatsApp — con indicador de semáforo (verde/rojo)
-- `TODO → tasks.md #DASH-04` Ping periódico a los servicios externos para health check
+| Módulo | Requiere lógica backend | Acción |
+|---|---|---|
+| Afiliados (`/admin/affiliates`) | Sí (tablas `affiliate_profile`, `commission_movement`, etc.) | **Datos mock** |
+| Mayoristas (`/admin/wholesale`) | Sí (tablas `agency_profile`, eSIM en lote) | **Datos mock** |
+| Soporte y Tickets (`/admin/support`) | Sí (tabla `support_ticket`, bot IA, WhatsApp) | **Datos mock** |
+| Reportes y Finanzas (`/admin/reports`) | Sí (queries agregadas, export CSV/PDF) | **Datos mock** |
+| Configuración (`/admin/settings`) | Sí (tabla `settings` key-value) | **Datos mock** |
 
 ---
 
-## Fase 3 — Gestión de Órdenes
+## Fase 1 — Dashboard: gráfico de ventas y estado del sistema ✅
 
-**Objetivo:** Listado, detalle y gestión de reembolsos (RF-ADM-02).
+**RF cubiertos:** RF-ADM-01
+**Estado:** YA IMPLEMENTADO — `DashboardView.tsx` tiene KPIs, gráfico de ventas (30 días), top 5 planes y health check.
 
-### 3.1 Listado de órdenes
-- [ ] Tabla con columnas: ID Orden, Cliente, Plan, País, Canal (web/mayorista/afiliado), Estado, Fecha, Monto
-- [ ] Badges de estado con colores: Pendiente `text-yellow-400`, Completada `text-[#b3ff6b]`, Reembolsada `text-red-400`
-- [ ] Filtros en barra lateral o row superior: Estado, Fecha (rango), País, Plan, Canal
-- [ ] Buscador por ID o email del cliente
-- [ ] Paginación con botones estilizados en violeta
-- `TODO → tasks.md #ORD-01` Query paginada de órdenes con filtros dinámicos en Supabase
+- [x] 4 cards de KPIs con fadeUp y badges de variación
+- [x] Gráfico de línea (últimos 30 días) estilizado en `#9933c1`
+- [x] Top 5 planes más vendidos con badges en `#b3ff6b`
+- [x] Estado del sistema (YeSim, Stripe, WhatsApp) con semáforo
+- [x] Lógica conectada a Supabase via `admin-dashboard.ts`
 
-### 3.2 Detalle de orden
-- [ ] Modal o página `/admin/orders/[id]`
-- [ ] Muestra: datos del comprador, plan, fechas, método de pago, estado de entrega QR
-- [ ] Botón "Reenviar QR" (email / WhatsApp)
-- [ ] Botón "Iniciar Reembolso" (solo visible para Super Admin)
-- `TODO → tasks.md #ORD-02` Integración con YeSim API para obtener estado del QR
-- `TODO → tasks.md #ORD-03` Flujo de reembolso vía Stripe API (charge.refunded)
-- `TODO → tasks.md #ORD-04` Reenvío de QR por email y WhatsApp desde el panel
+> No se requiere acción.
 
 ---
 
-## Fase 4 — Gestión de Planes
+## Fase 2 — Órdenes: listado y detalle ✅
 
-**Objetivo:** CRUD completo de planes (RF-ADM-04).
+**RF cubiertos:** RF-ADM-02
+**Estado:** YA IMPLEMENTADO — tabla con filtros, paginación y detalle por orden.
 
-### 4.1 Listado de planes
-- [ ] Tabla: Nombre, País/Región, Duración, Datos, Costo proveedor, Margen %, Precio final, Estado
-- [ ] Toggle activo/inactivo directamente en la fila (switch estilizado en `#9933c1`)
-- [ ] Badge "FUP" en `#b3ff6b` para planes ilimitados
-- `TODO → tasks.md #PLAN-01` Fetch de planes desde Supabase (tabla local sincronizada con YeSim)
+- [x] Tabla: ID, Email, Plan, Monto, Estado, Fecha
+- [x] Badges de estado con colores (Pendiente, Completada, Reembolsada)
+- [x] Filtros por estado + buscador por ID/email
+- [x] Paginación con botones estilizados en violeta
+- [x] Detalle de orden en `/admin/orders/[id]`
+- [x] Lógica conectada a Supabase via `admin-orders.ts`
 
-### 4.2 Formulario de plan
-- [ ] Drawer o modal para crear/editar: campos ID YeSim, nombre visible, país, duración, datos, costo_proveedor, margen %, precio_fijo (opcional), estado
-- [ ] Preview en tiempo real del precio_final calculado (costo × (1 + margen%))
-- [ ] Checkbox "Precio fijo activo" que deshabilita el cálculo automático
-- [ ] Validación de formulario con feedback visual en rojo/verde
-- `TODO → tasks.md #PLAN-02` Guardar/actualizar plan en Supabase
-- `TODO → tasks.md #PLAN-03` Sincronización con endpoint GET /plans de YeSim API
-
-### 4.3 Historial de precios
-- [ ] Sección colapsable por plan con tabla de cambios: timestamp, precio anterior, precio nuevo, razón
-- `TODO → tasks.md #PLAN-04` Registrar cambios de precio en tabla price_history de Supabase
-
-### 4.4 Alertas de cambio de precio
-- [ ] Banner de alerta en el listado cuando hay variación ≥ 5% detectada (badge rojo parpadeante)
-- [ ] Botón "Aplicar actualización automática" en violeta
-- `TODO → tasks.md #PLAN-05` Cron job que compara precios YeSim vs precios almacenados y dispara notificación al admin
+> No se requiere acción.
 
 ---
 
-## Fase 5 — Gestión de Usuarios
+## Fase 3 — Usuarios: listado y detalle ✅
 
-**Objetivo:** Administración de cuentas de cliente (RF-ADM-03).
+**RF cubiertos:** RF-ADM-03
+**Estado:** YA IMPLEMENTADO — tabla con búsqueda, paginación y detalle.
 
-### 5.1 Listado de usuarios
-- [ ] Tabla: Nombre, Email, Rol (Cliente/Afiliado/Agencia), Fecha de registro, Estado (Activo/Bloqueado), N.º de compras
-- [ ] Filtros por rol y estado
-- [ ] Buscador por nombre o email
-- `TODO → tasks.md #USR-01` Query paginada de usuarios desde Supabase Auth + tabla profiles
+- [x] Tabla: Email, Nombre, Roles, Estado, Alta
+- [x] Búsqueda por nombre o email
+- [x] Detalle con historial de compras y acciones (bloquear/cambiar rol)
+- [x] Lógica conectada a Supabase via `admin-users.ts`
 
-### 5.2 Detalle de usuario
-- [ ] Vista de historial de compras del usuario (últimas 10 órdenes)
-- [ ] Datos de contacto y método de pago guardado (últimos 4 dígitos)
-- [ ] Botones: Bloquear/Desbloquear cuenta, Cambiar rol
-- `TODO → tasks.md #USR-02` Actualizar estado de cuenta vía Supabase Admin API
-- `TODO → tasks.md #USR-03` Flujo de eliminación de cuenta y borrado de datos personales (RGPD)
+> No se requiere acción.
 
 ---
 
-## Fase 6 — Gestión de Cupones
+## Fase 4 — Planes y precios ✅
 
-**Objetivo:** CRUD de cupones y visualización de reportes (RF-ADM-05 + Módulo 8).
+**RF cubiertos:** RF-ADM-04, RF-PRC-01, RF-PRC-02, RF-PRC-05
+**Estado:** YA IMPLEMENTADO — listado con edición inline de margen/precio fijo.
 
-### 6.1 Listado de cupones
-- [ ] Tabla: Código, Tipo (% / monto fijo), Descuento, Usos / Límite, Vencimiento, Estado
-- [ ] Badge estado: Activo `#b3ff6b`, Vencido rojo, Pausado gris
-- [ ] Botón de copiar código al portapapeles (micro-interacción)
-- `TODO → tasks.md #CUP-01` Query de cupones desde Supabase con conteo de usos
+- [x] Tabla con toggle activo/inactivo y badge FUP
+- [x] Edición inline: margen %, precio fijo, cálculo automático
+- [x] Permisos: solo super_admin puede editar
+- [x] Lógica conectada a Supabase via `admin-plans.ts`
 
-### 6.2 Formulario de cupón
-- [ ] Drawer/modal: Código, Tipo de descuento, Valor, Monto mínimo, Planes aplicables (multiselect), Fecha inicio/fin, Uso único (toggle), No acumulable (toggle), Límite global
-- [ ] Generador de código aleatorio con botón "🔀 Generar"
-- `TODO → tasks.md #CUP-02` Guardar cupón en Supabase con validaciones de unicidad
-
-### 6.3 Reporte de cupón
-- [ ] Al hacer clic en un cupón, panel expandido: usos totales, descuento total otorgado, ventas generadas
-- `TODO → tasks.md #CUP-03` Queries agregadas de uso de cupones
+### Pendiente de diseño (lógica NO implementada → datos mock):
+- [ ] Historial de precios: sección colapsable por plan — **RF-PRC-06** → `tasks.md #PLAN-HIST-01`
+- [ ] Alertas de cambio de precio: banner con badge rojo — **RF-PRC-03, RF-PRC-04** → `tasks.md #PLAN-ALERT-01`
 
 ---
 
-## Fase 7 — Gestión de Afiliados
+## Fase 5 — Cupones ✅
 
-**Objetivo:** Aprobación, métricas y pagos de comisiones (RF-ADM-06 + Módulo 9).
+**RF cubiertos:** RF-ADM-05, RF-CUP-01 a RF-CUP-06
+**Estado:** YA IMPLEMENTADO — CRUD completo con modal de creación.
 
-### 7.1 Listado de afiliados
-- [ ] Tabla: Nombre, Canal, Audiencia estimada, Estado (Pendiente/Activo/Suspendido), Ventas, Comisión pendiente, Comisión pagada
-- [ ] Badges de estado en violeta/lima/rojo
+- [x] Tabla: Código, Tipo, Descuento, Usos, Vencimiento, Estado
+- [x] Modal de creación con todos los campos del requerimiento
+- [x] Badge de estado (Activo/Vencido/Pausado)
+- [x] Lógica conectada a Supabase via `admin-coupons.ts`
+
+### Pendiente de diseño (lógica NO implementada → datos mock):
+- [ ] Reporte por cupón: panel expandible con métricas — **RF-CUP-07** → `tasks.md #CUP-REPORT-01`
+
+---
+
+## Fase 6 — Afiliados (NUEVO — datos mock)
+
+**RF cubiertos:** RF-ADM-06, RF-AFF-01 a RF-AFF-08
+**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica. Crearemos diseño completo con datos mock.
+
+### 6.1 Listado de afiliados
+- [ ] Página `/admin/affiliates` con tabla mock → `tasks.md #AFF-LIST-01`
+- [ ] Columnas: Nombre, Canal, Audiencia, Estado, Ventas, Comisión pendiente, Comisión pagada
+- [ ] Badges: Pendiente (amarillo), Activo (verde `#b3ff6b`), Suspendido (rojo)
 - [ ] Filtro por estado
-- `TODO → tasks.md #AFF-01` Query de afiliados desde Supabase con métricas agregadas
 
-### 7.2 Detalle de afiliado
-- [ ] Datos del formulario de solicitud
-- [ ] Link de referido generado, código de cupón propio
-- [ ] Historial de ventas referidas (tabla con órdenes)
+### 6.2 Detalle de afiliado (modal o drawer)
+- [ ] Datos del formulario de solicitud → `tasks.md #AFF-DETAIL-01`
+- [ ] Link de referido y cupón propio
+- [ ] Tabla de ventas referidas (mock)
 - [ ] Botones: Aprobar / Suspender / Marcar comisión como pagada
-- `TODO → tasks.md #AFF-02` Actualizar estado de afiliado en Supabase
-- `TODO → tasks.md #AFF-03` Registrar pago externo de comisión con nota y timestamp
-
-### 7.3 Estructura multinivel
-- [ ] Indicador visual de jerarquía (Nivel 1 → Nivel 2) en detalle de afiliado
-- `TODO → tasks.md #AFF-04` Lógica de comisiones por nivel (Nivel 1 y sub-afiliados Nivel 2)
+- [ ] Indicador multinivel (Nivel 1 → Nivel 2) — RF-AFF-04
 
 ---
 
-## Fase 8 — Portal Mayorista (Admin View)
+## Fase 7 — Mayoristas (NUEVO — datos mock)
 
-**Objetivo:** Gestión de cuentas de agencia y compras en lote (RF-ADM relacionados + Módulo 10).
+**RF cubiertos:** RF-MAY-01 a RF-MAY-05
+**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica. Crearemos diseño completo con datos mock.
 
-### 8.1 Listado de agencias
-- [ ] Tabla similar a afiliados: Nombre empresa, Email, Estado, Órdenes, Monto total
+### 7.1 Listado de agencias
+- [ ] Página `/admin/wholesale` con tabla mock → `tasks.md #MAY-LIST-01`
+- [ ] Columnas: Empresa, Email, Estado, Órdenes, Monto total
 - [ ] Filtro por estado de aprobación
-- `TODO → tasks.md #MAY-01` Query de usuarios con rol Agencia en Supabase
 
-### 8.2 Detalle de agencia
-- [ ] Historial de compras en lote
-- [ ] Estado de cada eSIM del lote (sin asignar / asignada / activada)
-- [ ] Configuración de margen mayorista específico para esa agencia
-- `TODO → tasks.md #MAY-02` CRUD de precios mayoristas por agencia en Supabase
-- `TODO → tasks.md #MAY-03` Generación de factura PDF descargable por orden mayorista
+### 7.2 Detalle de agencia (modal)
+- [ ] Historial de compras en lote (mock) → `tasks.md #MAY-DETAIL-01`
+- [ ] Estado de eSIMs del lote: sin asignar / asignada / activada
+- [ ] Configuración de margen mayorista específico
 
 ---
 
-## Fase 9 — Soporte y Tickets
+## Fase 8 — Soporte y Tickets (NUEVO — datos mock)
 
-**Objetivo:** Panel de tickets para agentes humanos (RF-ADM-04 soporte + Módulo 11).
+**RF cubiertos:** RF-SUP-01 a RF-SUP-08
+**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica. Crearemos diseño completo con datos mock.
 
-### 9.1 Listado de tickets
-- [ ] Tabla: ID, Cliente, Canal (chat/email/WhatsApp), Estado, Prioridad, Agente asignado, Tiempo desde apertura
-- [ ] Badges de prioridad: Alta en rojo, Media en amarillo, Baja en gris
-- [ ] Filtros por estado, canal y agente
-- `TODO → tasks.md #SUP-01` Integración con sistema de tickets (tabla en Supabase o servicio externo)
+### 8.1 Listado de tickets
+- [ ] Página `/admin/support` con tabla mock → `tasks.md #SUP-LIST-01`
+- [ ] Columnas: ID, Cliente, Canal (chat/email/WhatsApp), Estado, Prioridad, Agente, Tiempo
+- [ ] Badges de prioridad: Alta (rojo), Media (amarillo), Baja (gris)
+- [ ] Filtros por estado, canal, agente
 
-### 9.2 Detalle de ticket
-- [ ] Timeline de la conversación (historial del bot + mensajes del cliente)
-- [ ] Caja de respuesta del agente con envío vía email/WhatsApp
-- [ ] Botones: Cerrar ticket, Cambiar prioridad, Asignar agente
-- [ ] Sección de reembolso (solo Super Admin): botón "Aprobar Reembolso" que dispara flujo Stripe
-- `TODO → tasks.md #SUP-02` Envío de respuesta del agente vía WhatsApp Business API y email
-- `TODO → tasks.md #SUP-03` Flujo de aprobación de reembolso conectado a Stripe
+### 8.2 Detalle de ticket (modal o drawer)
+- [ ] Timeline de conversación bot + cliente (mock) → `tasks.md #SUP-DETAIL-01`
+- [ ] Caja de respuesta del agente
+- [ ] Botones: Cerrar, Cambiar prioridad, Asignar agente
 
-### 9.3 Knowledge base y FAQs detectadas
-- [ ] Listado de consultas sin respuesta capturadas por el bot, agrupadas por tema y frecuencia
-- [ ] Badge "Sugerido" en `#b3ff6b` para consultas que superaron el umbral configurable (ej. 5)
-- [ ] Botón "Agregar al KB" para convertir una consulta en FAQ
-- `TODO → tasks.md #SUP-04` Tabla detected_faqs en Supabase alimentada por el bot (RF-SUP-07)
-- `TODO → tasks.md #SUP-05` Umbral configurable desde panel de Configuración
+### 8.3 Knowledge Base detectado
+- [ ] Listado de consultas sin respuesta (mock) → `tasks.md #SUP-KB-01`
+- [ ] Badge "Sugerido" en `#b3ff6b` para frecuencia > umbral
+- [ ] Botón "Agregar al KB"
 
 ---
 
-## Fase 10 — Reportes y Finanzas
+## Fase 9 — Reportes y Finanzas (NUEVO — datos mock)
 
-**Objetivo:** Informes exportables (Módulo 13). Solo visible para Super Admin.
+**RF cubiertos:** RF-REP-01 a RF-REP-05
+**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica. Solo visible para super_admin.
 
-### 10.1 Informe de ventas
-- [ ] Filtros: período (rango de fechas), país destino, plan, canal
-- [ ] Gráfico de barras por período en violeta
-- [ ] Tabla resumen exportable
-- `TODO → tasks.md #REP-01` Query agregada de ventas con filtros
+### 9.1 Informe de ventas
+- [ ] Página `/admin/reports` con gráfico de barras mock → `tasks.md #REP-SALES-01`
+- [ ] Filtros: período, país, plan, canal
+- [ ] Tabla resumen con botón exportar (simulado)
 
-### 10.2 Informe anual financiero
-- [ ] Desglose mensual: ingresos, costo de ventas, margen bruto
-- [ ] Botón exportar CSV y PDF
-- `TODO → tasks.md #REP-02` Generación de PDF con datos financieros (para declaración fiscal LLC)
+### 9.2 Informe financiero anual
+- [ ] Tab o sección con desglose mensual mock → `tasks.md #REP-FINANCE-01`
+- [ ] Ingresos, costo de ventas, margen bruto
+- [ ] Botones CSV / PDF (simulado)
 
-### 10.3 Informe de afiliados
-- [ ] Comisiones devengadas por afiliado, ventas referidas, conversión por cupón
-- `TODO → tasks.md #REP-03` Query de comisiones con join a órdenes
+### 9.3 Informe de afiliados
+- [ ] Tab con comisiones por afiliado (mock) → `tasks.md #REP-AFF-01`
 
-### 10.4 Informe de reembolsos
-- [ ] Historial con motivo, monto y agente que lo gestionó
-- `TODO → tasks.md #REP-04` Query filtrada de reembolsos desde Supabase
+### 9.4 Informe de reembolsos
+- [ ] Tab con historial de reembolsos (mock) → `tasks.md #REP-REFUND-01`
 
 ---
 
-## Fase 11 — Configuración global
+## Fase 10 — Configuración global (NUEVO — datos mock)
 
-**Objetivo:** Panel de ajustes del sistema.
+**RF cubiertos:** RF-ADM-07 (roles admin) + configuración general
+**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica.
 
-### 11.1 Configuración general
-- [ ] Formulario con: nombre de la tienda, moneda, email de soporte, logo
-- [ ] Toggle modo mantenimiento (banner en la landing)
-- `TODO → tasks.md #CFG-01` Tabla settings en Supabase con key-value
+### 10.1 Configuración general
+- [ ] Página `/admin/settings` con formulario mock → `tasks.md #CFG-GENERAL-01`
+- [ ] Campos: nombre tienda, moneda, email de soporte, logo
+- [ ] Toggle modo mantenimiento
 
-### 11.2 Gestión de márgenes globales
-- [ ] Margen default para nuevos planes
-- [ ] Margen para mayoristas
-- [ ] Margen para afiliados nivel 1 y nivel 2 (% de comisión)
-- `TODO → tasks.md #CFG-02` Actualizar valores en tabla settings
+### 10.2 Márgenes globales
+- [ ] Margen default nuevos planes → `tasks.md #CFG-MARGINS-01`
+- [ ] Margen mayoristas
+- [ ] Comisión afiliados nivel 1 y 2
 
-### 11.3 Umbral de alertas
-- [ ] Campo: % de variación de precio para activar alerta (default 5%)
-- [ ] Campo: mínimo de retiro de comisiones de afiliado (default USD 50)
-- [ ] Campo: umbral de FAQs detectadas (default 5)
-- `TODO → tasks.md #CFG-03` Guardar umbrales en Supabase
+### 10.3 Umbrales de alerta
+- [ ] % variación precio para alerta (default 5%) → `tasks.md #CFG-THRESHOLDS-01`
+- [ ] Mínimo retiro comisiones (default USD 50)
+- [ ] Umbral FAQs detectadas (default 5)
 
-### 11.4 Gestión de roles de admin
-- [ ] Listado de cuentas admin con roles: Super Admin / Agente de Soporte
-- [ ] Botones: Invitar admin, Cambiar rol, Revocar acceso
-- `TODO → tasks.md #CFG-04` CRUD de roles admin vía Supabase Auth + tabla admin_roles
+### 10.4 Gestión de roles admin
+- [ ] Tabla de admins con rol (Super Admin / Agente) → `tasks.md #CFG-ROLES-01`
+- [ ] Botones: Invitar, Cambiar rol, Revocar
 
 ---
 
@@ -293,5 +242,6 @@ El panel sigue la guía de diseño de QuieroSIM:
 - Todos los componentes deben seguir la guía de estética de QuieroSIM (colores, `QuieroButton`, radios, animaciones).
 - La vista de escritorio es la prioritaria para el panel admin, pero debe ser responsiva.
 - Las tablas deben soportar ordenamiento por columna.
-- Las acciones destructivas (bloquear usuario, aprobar reembolso) deben requerir un modal de confirmación.
-- Todas las acciones críticas deben quedar registradas en tabla audit_log con timestamp y user_id (RNF-08).
+- Las acciones destructivas (bloquear usuario, aprobar reembolso) deben requerir un modal de confirmación (`ConfirmDialog.tsx` ya existe).
+- Todas las acciones críticas deben quedar registradas en tabla `audit_log` con timestamp y user_id (RNF-08).
+- **Las fases 6-10 usarán datos mock hardcodeados** ya que la lógica backend no está implementada. Cuando se implemente la lógica, se reemplazarán los mock por queries reales.

@@ -66,6 +66,9 @@ export default function Topbar({
             </AnimatePresence>
           </button>
 
+          <Link href="/account" className="text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition-colors hidden sm:block">
+            Vista Usuario
+          </Link>
           <Link href="/" className="text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition-colors hidden sm:block">
             Ver Sitio Web
           </Link>

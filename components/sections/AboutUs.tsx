@@ -6,7 +6,7 @@ import { Linkedin, Mail } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-import felipeImg from '@/images/felipe-babenco.jpeg';
+import fundadoresImg from '@/images/fundadores.jpeg';
 
 export default function AboutUs() {
   const { fadeUp } = useScrollReveal();
@@ -32,29 +32,29 @@ export default function AboutUs() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-          
+
           {/* Image Column */}
-          <motion.div 
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-100px' }}
             variants={fadeUp}
             className="md:col-span-5 flex justify-center md:justify-end"
           >
-            <div className="relative w-72 h-72 md:w-80 md:h-80 xl:w-96 xl:h-96 shrink-0 group">
+            <div className="relative w-72 h-[380px] md:w-80 md:h-[420px] xl:w-96 xl:h-[500px] shrink-0 group">
               <div className="absolute inset-0 bg-[#b3ff6b] rounded-3xl rotate-3 group-hover:rotate-6 transition-transform duration-500 opacity-20" />
               <div className="absolute inset-0 bg-zinc-200 rounded-3xl -rotate-3 group-hover:-rotate-6 transition-transform duration-500 shadow-xl border border-black/5" />
-              
+
               <div className="absolute inset-0 rounded-3xl overflow-hidden bg-white z-10 border border-black/10">
                 {/* Fallback pattern while image is missing / placeholder */}
-                <Image 
-                  src={felipeImg} 
-                  alt="Felipe Babenco - CEO & Co-Founder" 
+                <Image
+                  src={fundadoresImg}
+                  alt={t('aboutUs.name')}
                   fill
                   referrerPolicy="no-referrer"
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover object-center scale-[1.03] transition-transform duration-700 group-hover:scale-[1.08]"
                 />
-                
+
                 {/* Fallback content in case image doesn't load/exist yet */}
                 <div className="absolute inset-0 flex items-center justify-center -z-10 bg-zinc-100">
                   <span className="text-zinc-400 text-xs">{t('aboutUs.photoPlaceholder')}</span>
@@ -64,7 +64,7 @@ export default function AboutUs() {
           </motion.div>
 
           {/* Text Column */}
-          <motion.div 
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-100px' }}
@@ -84,15 +84,9 @@ export default function AboutUs() {
             </div>
 
             <div className="space-y-4 text-zinc-500 font-sans leading-relaxed text-lg">
-              <p>
-                {t('aboutUs.p1')}
-              </p>
-              <p>
-                {t('aboutUs.p2')}<span className="text-zinc-900 font-medium">{t('aboutUs.tuTraslado')}</span>{t('aboutUs.p2_2')}
-              </p>
-              <p>
-                {t('aboutUs.p3')}
-              </p>
+              <p>{t('aboutUs.p1')}</p>
+              <p>{t('aboutUs.p2')}</p>
+              <p>{t('aboutUs.p3')}</p>
             </div>
 
           </motion.div>

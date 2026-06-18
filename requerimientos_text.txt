@@ -1,0 +1,762 @@
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Requerimientos 
+Funcionales 
+Proyecto QuieroSIM 
+ 
+ 
+ 
+Cliente​
+QUIERO LLC 
+ 
+Desarrollador​
+Magne Studios 
+ 
+Stack técnico​
+Next.js · Supabase · API YeSim 
+ 
+Versión​
+1.1 — Con modificaciones del cliente  
+ 
+Fecha​
+22 de May de 2026 
+ 
+Estado​
+En revisión 
+ 
+ 
+ 
+Este documento recoge los requerimientos funcionales del MVP de QuieroSIM, derivados de la reunión de kick-off entre 
+QUIERO LLC y Magne Studios. Sirve como referencia técnica para el equipo de desarrollo y base para la validación con el 
+cliente. 
+ 
+ 
+Tabla de Contenido​
+ 
+1.​ Visión General del Proyecto 
+2.​ Arquitectura y Stack Técnico 
+3.​ Módulo de Catálogo y Planes 
+4.​ Módulo de Compra y Checkout 
+5.​ Entrega de eSIM y QR 
+6.​ Panel de Administración 
+7.​ Sistema de Precios Dinámicos 
+8.​ Cupones y Promociones 
+9.​ Sistema de Afiliados 
+10.​ Portal Mayorista 
+11.​ Atención al Cliente e IA 
+12.​ Autenticación y Cuentas de Usuario 
+13.​ Reportes y Finanzas 
+14.​ Localización e Internacionalización 
+15.​ Legal y Cumplimiento 
+16.​ Integraciones Externas 
+17.​ Reseñas y Prueba Social 
+18.​ Requisitos No Funcionales 
+Anexo. Glosario de Términos 
+ 
+ 
+ 
+ 
+ 
+QuieroSIM es una plataforma de comercio electrónico especializada en la venta de eSIMs prepago para viajeros 
+internacionales. El mensaje central del producto es «conectividad y tranquilidad»: el usuario debe poder llegar a su 
+destino con Internet disponible de inmediato, sin fricciones. 
+ 
+ 
+1.1​Objetivo del MVP 
+El MVP debe ser un producto pulido y completamente funcional listo para pruebas de mercado reales. La prioridad es la 
+calidad sobre la velocidad de lanzamiento. 
+ 
+KPI 
+Meta MVP 
+Conversión checkout 
+≥ 3 % 
+Tiempo de entrega QR 
+< 2 min tras pago 
+CSAT soporte 
+≥ 4.5 / 5 
+Uptime 
+99.9 % 
+Idiomas soportados 
+ES · EN · PT 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-ARQ-01 Frontend 
+La aplicación se construirá con Next.js 14+ (App Router). El 
+rendering debe combinar SSR para SEO y CSR para interacciones 
+dinámicas. 
+Alta · Arquitectura 
+RF-ARQ-02 Base de 
+Datos 
+Se utilizará Supabase como backend (PostgreSQL + Auth + Storage + 
+Realtime). Todas las tablas deben incluir RLS (Row Level Security) 
+correctamente configurado. 
+Alta · Arquitectura 
+RF-ARQ-03 API 
+Proveedor 
+La integración con YeSim API gestionará: listado de planes 
+disponibles, pricing en tiempo real, creación de órdenes y generación 
+de QR de eSIM. 
+Alta · Integración 
+RF-ARQ-04 Gateway de 
+Pagos 
+Integración con Stripe para procesar pagos con tarjeta. Se requiere 
+soporte de webhooks para confirmar órdenes de forma asíncrona. 
+Alta · Integración 
+RF-ARQ-05 Canal 
+WhatsApp 
+Integración con la API de WhatsApp Business (vía Twilio o similar) 
+para envío automatizado del QR y comunicaciones de soporte. 
+Media · Integración 
+RF-ARQ-06 Despliegue 
+El frontend se desplegará en Vercel. Las variables de entorno 
+sensibles (API keys) nunca deben exponerse al cliente. 
+Alta · DevOps 
+■​
+Felipe coordinará un chat grupal con el equipo de desarrollo y el proveedor YeSim para resolver dudas técnicas de 
+integración sin demoras. 
+ 
+ 
+ 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-CAT-01 Listado de 
+Planes 
+El sistema consumirá el endpoint de YeSim para obtener los planes 
+disponibles. Se mostrará: país/región de cobertura, duración, datos 
+incluidos, y precio final. 
+Alta · Frontend 
+RF-CAT-02 Filtros y 
+Búsqueda 
+El usuario podrá filtrar planes por: destino (país o región), duración 
+(días), volumen de datos y rango de precio. 
+Alta · UX 
+RF-CAT-03 Planes 
+'Ilimitados' 
+Los planes con FUP (Fair Use Policy) deben mostrar de forma visible 
+un aviso sobre la política de uso justo, en cumplimiento con los T&C. 
+Alta · Legal 
+RF-CAT-04 Ficha de Plan 
+Cada plan tendrá una ficha con: cobertura detallada, velocidad, 
+instrucciones de activación, dispositivos compatibles y política de 
+reembolso resumida. 
+Media · UX 
+RF-CAT-05 Comparativa 
+El usuario podrá comparar hasta 3 planes simultáneamente. 
+Baja · UX 
+ 
+ 
+El flujo de compra debe replicar la simplicidad del modelo de referencia HolaSIM: navegación basada en botones, mínima 
+cantidad de pasos y sin fricción. 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-CHK-01 Flujo de 
+Compra 
+El checkout constará de máximo 3 pasos: (1) selección de plan, (2) 
+datos del comprador + aceptación de T&C, (3) pago. El progreso debe 
+indicarse visualmente. 
+Alta · UX 
+RF-CHK-02 Guest 
+Checkout 
+Permitir compra sin registro previo. Al finalizar, se ofrecerá crear 
+cuenta para gestionar la eSIM. 
+Alta · UX 
+RF-CHK-03 Aplicación de 
+Cupones 
+El usuario podrá ingresar un código de descuento en el paso de pago. 
+El sistema validará en tiempo real disponibilidad, tipo y condiciones. 
+Alta · Funcional 
+RF-CHK-04 Resumen de 
+Orden 
+Antes de confirmar el pago, mostrar resumen completo: plan, precio 
+base, descuento aplicado (si hay) e impuestos. 
+Alta · UX 
+RF-CHK-05 Confirmación 
+Tras pago exitoso, mostrar página de confirmación con número de 
+orden y aviso de que el QR llegará por email y WhatsApp. 
+Alta · Funcional 
+RF-CHK-06 Pago con 
+Stripe 
+Procesar pago mediante Stripe Checkout o Payment Element. Soporte 
+para tarjetas de crédito/débito internacionales. Confirmar orden por 
+webhook. 
+Alta · Integración 
+RF-CHK-07 Guardar 
+Método de Pago 
+Los usuarios registrados podrán guardar un método de pago para 
+futuras compras (tokenización via Stripe). 
+Media · Funcional 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-QR-01 Generación de 
+QR 
+Tras confirmar el pago vía webhook de Stripe, el sistema llamará a 
+YeSim API para generar el QR de la eSIM de forma automática (< 2 
+min). 
+Alta · Crítico 
+ 
+ 
+RF-QR-02 Envío por 
+Email 
+El QR y las instrucciones de instalación se enviarán al email del 
+comprador en formato HTML responsivo con la imagen del QR 
+embebida. 
+Alta · Funcional 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-QR-03 Envío por 
+WhatsApp 
+El QR se enviará también por WhatsApp al número indicado durante el 
+checkout. Mensaje con imagen del QR + link a instrucciones. 
+Alta · Diferenciador 
+RF-QR-04 Panel de 
+Usuario 
+El usuario autenticado podrá ver sus eSIMs compradas, descargar el 
+QR y ver el estado del plan (activo / por activar / expirado). 
+Alta · Funcional 
+RF-QR-05 Reenvío 
+Manual 
+El usuario podrá solicitar el reenvío del QR por email o WhatsApp 
+desde su panel, con límite de reintentos para prevenir abuso. 
+Media · Funcional 
+RF-QR-06 Compatibilidad 
+Antes de finalizar la compra, el sistema debe advertir al usuario que 
+verifique la compatibilidad de su dispositivo (desbloqueado + 
+eSIM-ready). 
+Alta · Legal / UX 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-ADM-01 Dashboard 
+Vista principal con métricas clave: ventas del día/mes, número de 
+órdenes, ingresos, planes más vendidos y estado del sistema. 
+Alta · Admin 
+RF-ADM-02 Gestión de 
+Órdenes 
+Listado de órdenes con filtros por estado, fecha, país, plan y canal 
+(web / mayorista / afiliado). Ver detalle y gestionar reembolsos. 
+Alta · Admin 
+RF-ADM-03 Gestión de 
+Usuarios 
+Administrar cuentas de clientes: ver historial de compras, 
+bloquear/desbloquear cuenta y ver datos de contacto. 
+Alta · Admin 
+RF-ADM-04 Gestión de 
+Planes 
+CRUD de planes con campos: ID YeSim, nombre visible, país/región, 
+duración, datos, costo proveedor, margen (%), precio final, estado 
+(activo/inactivo). 
+Alta · Admin 
+RF-ADM-05 Gestión de 
+Cupones 
+Crear y gestionar cupones (ver Módulo 8). 
+Alta · Admin 
+RF-ADM-06 Gestión de 
+Afiliados 
+Panel para aprobar afiliados, ver métricas y gestionar pagos de 
+comisiones (ver Módulo 9). 
+Alta · Admin 
+RF-ADM-07 Roles de 
+Admin 
+Soportar al menos dos roles: Super Admin (acceso total) y Agente de 
+Soporte (solo órdenes y clientes, sin finanzas). 
+Media · Admin 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-PRC-01 Estructura de 
+Precio 
+Cada plan almacenará: costo_proveedor (USD), margen_porcentual 
+(%), precio_final calculado y precio_fijo (opcional, para promociones). 
+Alta · Negocio 
+RF-PRC-02 Cálculo 
+Automático 
+El precio_final = costo_proveedor × (1 + margen%). Si precio_fijo está 
+activo, se usa ese valor en lugar del calculado. 
+Alta · Negocio 
+ 
+ 
+RF-PRC-03 Alerta de 
+Cambio 
+El sistema comparará periódicamente (cron job) los precios de YeSim 
+API con los almacenados. Ante variación ≥ 5%, notificará al admin por 
+email. 
+Alta · Negocio 
+RF-PRC-04 Actualización 
+Automática 
+El admin podrá activar la actualización automática de precios al 
+detectar un cambio, respetando el margen configurado. 
+Alta · Negocio 
+RF-PRC-05 Precio Fijo / 
+Promo 
+Opción de fijar un precio especial por tiempo limitado (ej. promoción 
+Mundial) sin alterar el margen base. 
+Media · Negocio 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-PRC-06 Historial de 
+Precios 
+Registrar en base de datos todo cambio de precio con timestamp, 
+valor anterior y nuevo, para auditoría. 
+Media · Auditoría 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-CUP-01 Tipos de 
+Descuento 
+Soportar: porcentaje (%), monto fijo (USD) y envío gratuito (N/A para 
+eSIM, reservado para productos físicos futuros). 
+Alta · Funcional 
+RF-CUP-02 Condiciones 
+Cada cupón podrá configurar: monto mínimo de compra, planes 
+aplicables (todos o selección), fecha de inicio y vencimiento. 
+Alta · Funcional 
+RF-CUP-03 Uso Único 
+Opción de cupones de un solo uso por cuenta o de uso único global 
+(primer usuario que lo canjee). 
+Alta · Funcional 
+RF-CUP-04 No 
+Acumulable 
+Flag 'no acumulable': impide combinar con otros cupones activos en el 
+mismo carrito. 
+Alta · Funcional 
+RF-CUP-05 Límite de 
+Usos 
+Configurar un máximo de usos globales por cupón (ej. primeras 100 
+redenciones). 
+Media · Funcional 
+RF-CUP-06 Cupones de 
+Afiliado 
+Cada afiliado podrá tener un código personalizado que al usarse 
+registre la venta a su cuenta. 
+Alta · Afiliados 
+RF-CUP-07 Reporte de 
+Cupones 
+El admin verá: código, usos totales, descuento total otorgado y ventas 
+generadas por cupón. 
+Media · Reportes 
+ 
+ 
+El sistema de afiliados es un diferenciador clave para captar influencers y agencias. Debe ser robusto, multinivel y transparente, 
+resolviendo el principal dolor del sistema anterior (falta de visibilidad en tiempo real). 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-AFF-01 Registro de 
+Afiliado 
+Formulario de solicitud con datos: nombre, canal (blog, RRSS, 
+agencia), audiencia estimada. Aprobación manual por admin. 
+Alta · Afiliados 
+RF-AFF-02 Panel de 
+Afiliado 
+Dashboard personal con: link de referido único, ventas generadas, 
+comisiones pendientes/pagadas y código de cupón propio. 
+Alta · Diferenciador 
+RF-AFF-03 Comisiones 
+en Tiempo Real 
+Cada venta referida actualiza el balance del afiliado inmediatamente 
+(Supabase Realtime). Sin esperas ni reportes manuales. 
+Alta · Diferenciador 
+ 
+ 
+RF-AFF-04 Multinivel 
+Soportar hasta 2 niveles: Nivel 1 (venta directa, comisión %) y Nivel 
+2 (sub-afiliado captado por el Nivel 1, comisión menor %). 
+Alta · Afiliados 
+RF-AFF-05 Conversión a 
+Crédito 
+El afiliado podrá convertir comisiones acumuladas en crédito de datos 
+(saldo en plataforma) para usar en su próxima compra. 
+Media · Incentivo 
+RF-AFF-06 Solicitud de 
+Pago 
+El afiliado podrá solicitar retiro de comisiones cuando supere el 
+mínimo configurado (ej. USD 50). El admin gestiona el pago 
+externamente. 
+Alta · Afiliados 
+RF-AFF-07 Materiales de 
+Marketing 
+Sección en el panel con banners, textos y links pre-formateados para 
+facilitar la promoción. 
+Baja · Afiliados 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-AFF-08 Términos de 
+Afiliado 
+Cada afiliado deberá aceptar los términos del programa antes de 
+activarse. 
+Alta · Legal 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-MAY-01 Acceso 
+Diferenciado 
+Sección separada en la plataforma (ej. /wholesale) con acceso solo 
+para cuentas tipo 'Agencia' aprobadas por admin. 
+Alta · Mayorista 
+RF-MAY-02 Precios 
+Mayoristas 
+Los usuarios mayoristas verán precios especiales (menor margen) 
+configurados por el admin, distintos a los precios retail. 
+Alta · Mayorista 
+RF-MAY-03 Compra en 
+Lote 
+Posibilidad de comprar múltiples eSIMs de distintos destinos en una 
+sola transacción, con asignación posterior a sus clientes finales. 
+Alta · Mayorista 
+RF-MAY-04 Panel de 
+Agencia 
+Las agencias verán: inventario de eSIMs compradas, estado de cada 
+una, herramienta para asignar/enviar QR a cliente final. 
+Alta · Mayorista 
+RF-MAY-05 Facturación 
+Generación de factura/recibo descargable (PDF) por cada compra 
+mayorista, con datos de la empresa. 
+Media · Mayorista 
+ 
+ 
+El modelo de atención es híbrido desde el día 1: un bot de IA maneja consultas iniciales y tareas repetitivas, con traspaso 
+fluido a agente humano para casos complejos. Este diseño evita los problemas de soporte ad-hoc experimentados en 
+proyectos anteriores. 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-SUP-01 Bot de IA 
+Implementar un chatbot con LLM (ej. OpenAI API) entrenado con la 
+base de conocimiento de QuieroSIM: FAQs, T&C, política de 
+reembolsos y guías de instalación. 
+Alta · Soporte 
+RF-SUP-02 Casos del 
+Bot 
+El bot gestionará autónomamente: estado de eSIM, reenvío de QR, 
+instrucciones de instalación, compatibilidad de dispositivos y 
+información de planes. 
+Alta · Soporte 
+RF-SUP-03 Escalado a 
+Humano 
+Protocolo de traspaso definido: si el bot no resuelve en 2 intentos, o el 
+usuario solicita un agente, se crea un ticket y se notifica al equipo. 
+Alta · Soporte 
+ 
+ 
+RF-SUP-04 Gestión de 
+Tickets 
+Panel de tickets para agentes humanos: ver historial de conversación 
+con el bot, estado, prioridad y tiempo de respuesta SLA. 
+Alta · Soporte 
+RF-SUP-05 Reembolsos 
+Los reembolsos siempre serán gestionados por un agente humano. El 
+bot puede iniciar el proceso pero no tiene autorización para 
+aprobarlos. 
+Alta · Crítico 
+RF-SUP-06 Canales 
+Soporte disponible vía: chat en web, email (support@quierosim.com) y 
+WhatsApp. El bot opera en los 3 canales. 
+Alta · Soporte 
+RF-SUP07 ✦ Detección de 
+FAQs  
+El bot registrará automáticamente en base de datos las consultas que 
+no encuentren respuesta directa en el knowledge base, 
+categorizándolas por tema y frecuencia. El admin podrá revisar este 
+registro para enriquecer el knowledge base e ir construyendo 
+progresivamente la sección de FAQs públicas en la web. El sistema 
+debe incluir un umbral de frecuencia configurable (ej. 5 consultas 
+similares) para sugerir automáticamente al admin la incorporación de un 
+nuevo FAQ.  
+Alta · Soporte ✦  
+RF-SUP08 ✦ Respuesta a 
+Planes Ilimitados  
+El bot debe responder con precisión y transparencia a consultas del tipo 
+'¿Los planes ilimitados son realmente ilimitados?'. La respuesta debe 
+aclarar que estos planes aplican Fair Use Policy (FUP): el usuario 
+dispone de datos a alta velocidad hasta alcanzar un umbral de consumo 
+(variable por plan), tras el cual la velocidad se reduce significativamente 
+(throttling). Esta reducción de velocidad puede impactar el uso de 
+aplicaciones que demandan alto ancho de banda. El bot debe 
+mencionar el umbral específico del plan consultado si está disponible en 
+la API, y redirigir a la ficha completa del plan para más detalle. Esta 
+respuesta debe ser revisada y aprobada por el cliente antes del 
+lanzamiento.  
+Alta · Legal / UX ✦  
+​
+✦ RF-SUP-07 y RF-SUP-08 son requerimientos incorporados a pedido del cliente en revisión v1.1.  
+ 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-AUTH-01 Registro / 
+Login 
+Autenticación via Supabase Auth: email+contraseña y OAuth 
+(Google). Verificación de email obligatoria. 
+Alta · Auth 
+RF-AUTH-02 Perfiles de 
+Usuario 
+Un usuario puede tener rol: Cliente, Afiliado, Agencia (mayorista) o 
+Admin. Los roles se gestionan desde Supabase. 
+Alta · Auth 
+RF-AUTH-03 Panel de 
+Cliente 
+El cliente autenticado accede a: mis eSIMs, historial de pedidos, datos 
+personales y método de pago guardado. 
+Alta · UX 
+RF-AUTH-04 
+Recuperación de 
+Contraseña 
+Flujo estándar de reset por email, con token de expiración de 1 hora. 
+Alta · Auth 
+RF-AUTH-05 Eliminación 
+de Cuenta 
+El usuario puede solicitar la eliminación de su cuenta (cumplimiento 
+RGPD / derecho al olvido). Proceso requiere confirmación. 
+Alta · Legal 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-REP-01 Informe 
+Anual 
+Generación de informe financiero anual exportable a CSV/PDF: 
+ingresos totales, costo de ventas, margen bruto y desglose por mes, 
+para declaración fiscal de la LLC. 
+Alta · Legal / Finanzas 
+RF-REP-02 Informe de 
+Ventas 
+Dashboard con ventas por período, país de destino, plan y canal de 
+venta (directo / afiliado / mayorista). 
+Alta · Admin 
+RF-REP-03 Informe de 
+Afiliados 
+Comisiones devengadas por afiliado, ventas referidas y conversión por 
+código de cupón. 
+Media · Admin 
+RF-REP-04 Informe de 
+Reembolsos 
+Historial de reembolsos con motivo, monto y agente que lo gestionó. 
+Media · Admin 
+RF-REP-05 Exportación 
+Todos los informes deben ser exportables en formato CSV y PDF. 
+Alta · Admin 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-I18N-01 Idiomas 
+El sitio soportará 3 idiomas: Español (ES), Inglés (EN) y Portugués 
+(PT). Implementar con next-intl o i18next. 
+Alta · I18N 
+RF-I18N-02 Detección 
+Automática ✦  
+Detectar el idioma del navegador y redirigir al locale correspondiente. 
+Si el idioma detectado no es ES ni PT, se establecerá EN (inglés) 
+como idioma predeterminado. El usuario puede cambiar 
+manualmente el idioma desde cualquier página.  
+Media · UX ✦  
+RF-I18N-03 Contenido 
+Legal 
+Los T&C, Política de Privacidad y Política de Reembolsos deben estar 
+disponibles en los 3 idiomas (documentos ya provistos). 
+Alta · Legal 
+RF-I18N-04 Emails y 
+WhatsApp 
+Las comunicaciones automáticas (QR, confirmación) se enviarán en el 
+idioma seleccionado por el usuario. 
+Alta · UX 
+RF-I18N-05 SEO 
+Multilenguaje 
+Implementar hreflang tags y sitemaps por idioma para indexación 
+correcta en Google. 
+Media · SEO 
+✦ RF-I18N-02 modificado: se establece EN como idioma fallback para cualquier idioma distinto de ES o PT.  
+ 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-LEG-01 Aceptación 
+de T&C 
+El usuario debe aceptar explícitamente los Términos y Condiciones y 
+la Política de Privacidad durante el checkout (checkbox obligatorio). 
+Alta · Legal / Stripe 
+RF-LEG-02 Política de 
+Reembolso 
+La política de reembolsos debe estar enlazada en el footer, en la ficha 
+de plan y en el email de confirmación. 
+Alta · Legal / Stripe 
+RF-LEG-03 FUP Visible 
+Los planes 'ilimitados' deben mostrar de forma prominente la 
+existencia de la Política de Uso Justo antes y durante el checkout. 
+Alta · Legal 
+RF-LEG-04 RGPD / 
+Privacidad 
+Implementar banner de cookies con opciones de aceptar/rechazar 
+categorías. Registrar consentimientos en base de datos. 
+Alta · Legal 
+RF-LEG-05 Derecho al 
+Olvido 
+Proceso de eliminación de datos personales a solicitud del usuario, 
+con confirmación y registro de la acción (ver RF-AUTH-05). 
+Alta · Legal 
+RF-LEG-06 Menores de 
+Edad 
+El sistema debe incluir declaración de que el servicio no está dirigido a 
+menores de 18 años. 
+Alta · Legal 
+RF-LEG-07 Aprobación 
+Stripe 
+Todos los documentos legales (T&C, Privacidad, Reembolsos) deben 
+estar publicados y accesibles públicamente antes de activar Stripe. 
+Alta · Crítico 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-INT-01 YeSim API 
+Endpoints requeridos: GET /plans, POST /order, GET /order/{id}/qr. 
+Manejar errores de disponibilidad con reintentos y alertas. 
+Alta · Core 
+RF-INT-02 Stripe 
+Payment Intent / Checkout Session + Webhooks: 
+payment_intent.succeeded, charge.refunded. Guardar 
+payment_intent_id en orden. 
+Alta · Core 
+RF-INT-03 WhatsApp 
+Business API 
+Envío de mensajes de plantilla aprobados por Meta: confirmación de 
+orden, entrega de QR e instrucciones de instalación. 
+Alta · Core 
+RF-INT-04 ✦ Email 
+(Google Workspace)  
+Emails transaccionales: confirmación de orden, entrega de QR, reset 
+de contraseña y alertas al admin. El cliente ya dispone de Google 
+Workspace configurado para el dominio. Magne Studios debe 
+coordinar con Felipe el acceso a credenciales SMTP o la 
+configuración de una cuenta de servicio / App Password para integrar 
+el envío desde el dominio quierosim.com. Alternativa recomendada: 
+usar un servicio dedicado de email transaccional (Resend o 
+SendGrid) apuntando al dominio del Workspace para mejor 
+deliverability y tracking.  
+Alta · Core ✦  
+RF-INT-05 Google 
+Reviews 
+Widget o enlace destacado a Google My Business para mostrar 
+calificación y reseñas en el sitio. 
+Media · Marketing 
+RF-INT-06 Trustpilot 
+Integración del widget de Trustpilot en homepage y página de 
+checkout para reforzar la confianza. 
+Media · Marketing 
+RF-INT-07 Analytics 
+Integrar Google Analytics 4 con eventos custom: plan_viewed, 
+checkout_started, purchase_completed. 
+Media · Marketing 
+✦ RF-INT-04 actualizado: el cliente ya tiene Google Workspace configurado. Se debe coordinar acceso a credenciales. 
+ 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-REV-01 Widget 
+Google Reviews 
+Mostrar calificación promedio de Google en homepage, header o 
+footer. Actualización automática. 
+Media · Marketing 
+RF-REV-02 Widget 
+Trustpilot 
+Mostrar score de Trustpilot en homepage y en el flujo de checkout 
+(paso 2) para reducir abandono. 
+Media · Marketing 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RF-REV-03 Solicitud 
+Automática 
+Tras confirmar la activación de la eSIM (o X días después de la 
+compra), enviar email/WhatsApp solicitando dejar una reseña. 
+Baja · Marketing 
+ 
+ 
+ID / Módulo 
+Descripción del Requerimiento 
+Prioridad / Tipo 
+RNF-01 Rendimiento 
+Tiempo de carga inicial (LCP) < 2.5 s en conexión 4G. Core Web Vitals 
+en verde para todos los locales. 
+Alta · Performance 
+RNF-02 Disponibilidad 
+Uptime objetivo ≥ 99.9 % mensual. Monitoreo con alertas automáticas 
+(ej. Vercel + UptimeRobot). 
+Alta · Ops 
+RNF-03 Seguridad 
+HTTPS obligatorio. Headers de seguridad (CSP, HSTS). Claves de 
+API solo en variables de entorno server-side. Rate limiting en 
+endpoints públicos. 
+Alta · Seguridad 
+RNF-04 Escalabilidad 
+La arquitectura debe soportar picos de tráfico (ej. temporada 
+vacacional) sin degradación. Usar ISR/SSR de Next.js + Supabase 
+connection pooling. 
+Alta · Arquitectura 
+RNF-05 Accesibilidad 
+Cumplir WCAG 2.1 nivel AA. Soporte de lectores de pantalla y 
+navegación por teclado en flujo principal de compra. 
+Media · UX 
+RNF-06 Responsivo 
+El sitio debe ser completamente funcional en mobile (principal 
+dispositivo del viajero). Diseño mobile-first. 
+Alta · UX 
+RNF-07 SEO 
+SSR/SSG para páginas de catálogo y fichas de plan. Meta tags, Open 
+Graph, JSON-LD y sitemaps automáticos. 
+Alta · SEO 
+RNF-08 Auditoría 
+Todas las acciones críticas (compras, reembolsos, cambios de precio, 
+accesos admin) deben quedar registradas con timestamp y usuario. 
+Alta · Compliance 
+ 
+ 
+Este documento es confidencial y de uso exclusivo del equipo de Magne Studios y QUIERO LLC. Versión 1.0 — Sujeta a revisión y aprobación del cliente. 
+ 

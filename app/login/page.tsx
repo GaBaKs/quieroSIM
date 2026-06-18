@@ -27,15 +27,27 @@ function LoginForm() {
     setError(null);
     setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    if (signInError || !authData.user) {
       setSubmitting(false);
       setError(
-        signInError.message === 'Email not confirmed' ? t('auth.errorUnconfirmed') : t('auth.errorInvalid'),
+        signInError?.message === 'Email not confirmed' ? t('auth.errorUnconfirmed') : t('auth.errorInvalid'),
       );
       return;
     }
-    router.replace('/account');
+    
+    // Check if the user is an admin
+    const { data: adminData } = await supabase
+      .from('admin_profile')
+      .select('id')
+      .eq('user_id', authData.user.id)
+      .single();
+
+    if (adminData) {
+      router.replace('/admin');
+    } else {
+      router.replace('/account');
+    }
     router.refresh();
   };
 
