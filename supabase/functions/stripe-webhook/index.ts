@@ -8,6 +8,12 @@ import { createSupabaseProvisionStore } from '../_shared/services/provision-stor
 import { createResendClient } from '../_shared/email/resend.ts';
 import { sendQrDelivery } from '../_shared/services/delivery.ts';
 import { createSupabaseDeliveryStore } from '../_shared/services/delivery-store-supabase.ts';
+import { createTwilioClient } from '../_shared/whatsapp/twilio.ts';
+import { sendWhatsappDelivery } from '../_shared/services/whatsapp-delivery.ts';
+import {
+  createSupabaseQrHosting,
+  createSupabaseWhatsappStore,
+} from '../_shared/services/whatsapp-delivery-store-supabase.ts';
 
 /**
  * Webhook de Stripe + reintento manual de provisión.
@@ -60,6 +66,40 @@ async function deliverQrForOrder(supabase: any, orderId: string): Promise<void> 
   }
 }
 
+/**
+ * Segundo canal: si la orden tiene guest_phone, dispara el QR por WhatsApp
+ * (Twilio). Solo se intenta cuando hay teléfono Y eSIM; sin secrets de Twilio el
+ * transporte es null y la entrega queda failed para que el cron la levante. No
+ * bloquea ni afecta al canal email ni a la emisión.
+ */
+// deno-lint-ignore no-explicit-any
+async function deliverQrWhatsappForOrder(supabase: any, orderId: string): Promise<void> {
+  try {
+    const { data: order } = await supabase
+      .from('order')
+      .select('guest_phone, esim(id)')
+      .eq('id', orderId)
+      .maybeSingle();
+    const phone = (order?.guest_phone ?? '').trim();
+    const esim = Array.isArray(order?.esim) ? order?.esim[0] : order?.esim;
+    if (!phone || !esim) return; // sin teléfono o sin eSIM: no hay canal WhatsApp
+    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+    const from = Deno.env.get('TWILIO_WHATSAPP_FROM');
+    await sendWhatsappDelivery(esim.id, {
+      store: createSupabaseWhatsappStore(supabase),
+      media: createSupabaseQrHosting(supabase),
+      whatsapp:
+        accountSid && authToken && from
+          ? createTwilioClient({ accountSid, authToken, from })
+          : null,
+    });
+  } catch (e) {
+    // Jamás loguear el body/LPA/URL firmada; solo el motivo.
+    console.error('whatsapp delivery error', e instanceof Error ? e.message : String(e));
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
   const route = new URL(req.url).pathname.split('/').filter(Boolean).pop();
@@ -98,6 +138,7 @@ Deno.serve(async (req: Request) => {
     });
     if (result.ok && result.data.state === 'fulfilled') {
       await deliverQrForOrder(supabase, orderId);
+      await deliverQrWhatsappForOrder(supabase, orderId);
     }
     return json(result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error }, result.ok ? 200 : 409);
   }
@@ -239,7 +280,10 @@ Deno.serve(async (req: Request) => {
           yesim: makeYesim(),
         })
           .then(async (r) => {
-            if (r.ok && r.data.state === 'fulfilled') await deliverQrForOrder(supabase, orderId);
+            if (r.ok && r.data.state === 'fulfilled') {
+              await deliverQrForOrder(supabase, orderId);
+              await deliverQrWhatsappForOrder(supabase, orderId);
+            }
           })
           .catch((e) => console.error('provision error', e instanceof Error ? e.message : String(e)));
 
