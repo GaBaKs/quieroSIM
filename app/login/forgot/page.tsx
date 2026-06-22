@@ -7,11 +7,13 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { Mail } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import Turnstile from '@/components/Turnstile';
 
 /** Recuperación de contraseña del usuario final. */
 export default function ForgotPasswordPage() {
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -21,6 +23,7 @@ export default function ForgotPasswordPage() {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/confirm?next=/update-password`,
+      captchaToken,
     });
     // Siempre confirmar (no revelar si el email existe o no).
     setSent(true);
@@ -55,6 +58,7 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
+            <Turnstile onToken={setCaptchaToken} />
             <QuieroButton
               variant="primary"
               type="submit"

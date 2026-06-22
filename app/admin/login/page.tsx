@@ -9,6 +9,7 @@ import { Lock } from 'lucide-react';
 import { useTheme } from '@/components/admin/ThemeProvider';
 import { useMounted } from '@/hooks/use-mounted';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import Turnstile from '@/components/Turnstile';
 
 function LoginForm() {
   const router = useRouter();
@@ -18,6 +19,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'forbidden'
@@ -30,7 +32,11 @@ function LoginForm() {
     setError(null);
     setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: { captchaToken },
+    });
     if (signInError) {
       setSubmitting(false);
       setError(
@@ -93,6 +99,8 @@ function LoginForm() {
               {error}
             </p>
           )}
+
+          <Turnstile onToken={setCaptchaToken} />
 
           <div className="pt-6">
             <QuieroButton

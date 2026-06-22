@@ -8,6 +8,7 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { MailCheck, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import Turnstile from '@/components/Turnstile';
 
 /**
  * Registro del usuario final (RF-AUTH-01: email+contraseña con verificación
@@ -22,6 +23,7 @@ function RegisterForm() {
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ function RegisterForm() {
       options: {
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=/account`,
         data: { lang },
+        captchaToken,
       },
     });
     setSubmitting(false);
@@ -131,6 +134,8 @@ function RegisterForm() {
                   {error}
                 </p>
               )}
+
+              <Turnstile onToken={setCaptchaToken} />
 
               <div className="pt-4">
                 <QuieroButton

@@ -8,11 +8,13 @@ import { Mail } from 'lucide-react';
 import { useTheme } from '@/components/admin/ThemeProvider';
 import { useMounted } from '@/hooks/use-mounted';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import Turnstile from '@/components/Turnstile';
 
 export default function ForgotPasswordPage() {
   const { theme } = useTheme();
   const mounted = useMounted();
   const [email, setEmail] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -22,6 +24,7 @@ export default function ForgotPasswordPage() {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/confirm?next=/admin/update-password`,
+      captchaToken,
     });
     // Siempre confirmar (no revelar si el email existe o no).
     setSent(true);
@@ -60,6 +63,7 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
+            <Turnstile onToken={setCaptchaToken} />
             <QuieroButton
               variant="secondary"
               type="submit"

@@ -8,6 +8,7 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { Lock } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import Turnstile from '@/components/Turnstile';
 
 /** Login del usuario final (RF-AUTH-01) — Google OAuth se suma cuando haya credenciales. */
 function LoginForm() {
@@ -17,6 +18,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'invalid_link' ? t('auth.errorInvalidLink') : null,
@@ -27,7 +29,11 @@ function LoginForm() {
     setError(null);
     setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
-    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: { captchaToken },
+    });
     if (signInError || !authData.user) {
       setSubmitting(false);
       setError(
@@ -97,6 +103,8 @@ function LoginForm() {
               {error}
             </p>
           )}
+
+          <Turnstile onToken={setCaptchaToken} />
 
           <div className="pt-4">
             <QuieroButton
