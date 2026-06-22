@@ -11,9 +11,13 @@ import type { YesimEsim, YesimStatusQr } from '../yesim/types.ts';
  *  - `syncEsimStatuses`: reconciliación por cron con /bulk_sim_info — recupera
  *    webhooks perdidos y mantiene el consumo fresco.
  *
- * Mapeo estados YeSim → esim.status_qr (check de BD: generated/installed/active/expired):
+ * Mapeo estados de DISPOSITIVO YeSim → esim.status_qr (check de BD:
+ * generated/installed/active/expired):
  *  Released → generated · Installed → installed · Enabled → active ·
- *  Disabled/Deleted → expired. El estado crudo queda en yesim_status_raw.
+ *  Disabled → installed (línea apagada en el device) · Deleted → generated
+ *  (perfil borrado del device). El estado crudo queda en yesim_status_raw.
+ *  ⚠️ 'expired' NO sale del estado de dispositivo: es vencimiento REAL del plan
+ *  (plan_expired_at ya pasó) — lo resuelve deriveDbStatus.
  */
 
 export type EsimDbStatus = 'generated' | 'installed' | 'active' | 'expired';
@@ -27,9 +31,24 @@ export function mapYesimStatus(statusQr: YesimStatusQr): EsimDbStatus {
     case 'Enabled':
       return 'active';
     case 'Disabled':
+      return 'installed'; // línea apagada en el device — NO es vencimiento del plan
     case 'Deleted':
-      return 'expired';
+      return 'generated'; // perfil borrado del device — NO es vencimiento del plan
   }
+}
+
+/**
+ * Estado para la BD combinando vencimiento real del plan + estado del device.
+ * 'expired' SOLO cuando plan_expired_at ya pasó. Un plan vigente con la línea
+ * apagada/borrada NO es 'expired'. Un plan ya activado se muestra 'active'.
+ */
+export function deriveDbStatus(
+  info: Pick<YesimEsim, 'statusQr' | 'planActivatedAt' | 'planExpiredAt'>,
+  nowMs: number,
+): EsimDbStatus {
+  if (info.planExpiredAt && new Date(info.planExpiredAt).getTime() <= nowMs) return 'expired';
+  if (info.planActivatedAt) return 'active';
+  return mapYesimStatus(info.statusQr);
 }
 
 export interface EsimStatusUpdate {
@@ -100,7 +119,7 @@ function parseWebhookPayload(payload: unknown): EsimStatusEvent | PackageUsageEv
 
 function updateFromSimInfo(info: YesimEsim): EsimStatusUpdate {
   return {
-    statusQr: mapYesimStatus(info.statusQr),
+    statusQr: deriveDbStatus(info, Date.now()),
     yesimStatusRaw: info.statusQr,
     planActivatedAt: info.planActivatedAt,
     planExpiredAt: info.planExpiredAt,

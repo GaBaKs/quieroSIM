@@ -81,6 +81,18 @@ export async function claimOrder(input: { orderRef: string; email: string }): Pr
   return ok({ ok: true });
 }
 
+/**
+ * Estado mostrado al cliente. 'expired' SOLO por vencimiento real del plan
+ * (plan_expired_at ya pasó); un plan activado y vigente es 'active' aunque el
+ * status_qr guardado diga otra cosa (p. ej. la línea apagada en el teléfono).
+ */
+function deriveEsimStatus(stored: string | null, activatedAt: string | null, expiredAt: string | null): string {
+  if (expiredAt && new Date(expiredAt).getTime() <= Date.now()) return 'expired';
+  if (activatedAt) return 'active';
+  // Sin vencer y sin activar: nunca mostrar 'expired'.
+  return stored && stored !== 'expired' ? stored : 'generated';
+}
+
 /** eSIMs del usuario logueado (RLS), más recientes primero. */
 export async function getMyEsims(): Promise<Result<MyEsim[]>> {
   const supabase = await createSupabaseServerClient();
@@ -110,7 +122,7 @@ export async function getMyEsims(): Promise<Result<MyEsim[]>> {
       iccid: row.iccid,
       qrLpa: row.qr_lpa,
       iosTapLink: row.ios_tap_link,
-      status: row.status_qr ?? 'generated',
+      status: deriveEsimStatus(row.status_qr, row.plan_activated_at, row.plan_expired_at),
       planName: plan?.name ?? 'eSIM QuieroSIM',
       durationDays: plan?.duration_days ?? null,
       dataAmount: plan?.data_amount ?? null,

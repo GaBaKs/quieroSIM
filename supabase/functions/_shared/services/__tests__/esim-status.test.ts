@@ -6,6 +6,7 @@ import {
   handleYesimWebhook,
   syncEsimStatuses,
   mapYesimStatus,
+  deriveDbStatus,
   type EsimStatusStore,
   type EsimStatusUpdate,
 } from '../esim-status.ts';
@@ -49,12 +50,25 @@ async function makeYesimWithEsim() {
 }
 
 describe('mapYesimStatus', () => {
-  it('mapea los 5 estados del contrato al check de la BD', () => {
+  it('mapea estados de DISPOSITIVO al check de la BD (nunca expired)', () => {
     expect(mapYesimStatus('Released')).toBe('generated');
     expect(mapYesimStatus('Installed')).toBe('installed');
     expect(mapYesimStatus('Enabled')).toBe('active');
-    expect(mapYesimStatus('Disabled')).toBe('expired');
-    expect(mapYesimStatus('Deleted')).toBe('expired');
+    expect(mapYesimStatus('Disabled')).toBe('installed'); // línea apagada, NO vencida
+    expect(mapYesimStatus('Deleted')).toBe('generated'); // borrada del device, NO vencida
+  });
+});
+
+describe('deriveDbStatus', () => {
+  const t0 = new Date('2026-06-22T12:00:00Z').getTime();
+  it("'expired' SOLO si plan_expired_at ya pasó", () => {
+    expect(deriveDbStatus({ statusQr: 'Enabled', planActivatedAt: '2026-06-20 12:00:00', planExpiredAt: '2026-06-21 12:00:00' }, t0)).toBe('expired');
+  });
+  it('plan activado y vigente → active aunque el device esté Disabled', () => {
+    expect(deriveDbStatus({ statusQr: 'Disabled', planActivatedAt: '2026-06-22 11:00:00', planExpiredAt: '2026-06-23 11:00:00' }, t0)).toBe('active');
+  });
+  it('sin activar → refleja el estado del device', () => {
+    expect(deriveDbStatus({ statusQr: 'Installed', planActivatedAt: null, planExpiredAt: null }, t0)).toBe('installed');
   });
 });
 
@@ -69,7 +83,8 @@ describe('handleYesimWebhook', () => {
     expect(r.ok && r.data.result).toBe('processed');
     expect(events[0]).toMatchObject({ eventType: 'EsimStatus', iccid, result: 'processed' });
     const update = updates.get('e1')!;
-    expect(update.statusQr).toBe('installed');
+    // El mock activa el plan en add_plan_iccid → deriveDbStatus prioriza 'active'.
+    expect(update.statusQr).toBe('active');
     expect(update.yesimStatusRaw).toBe('Installed');
     expect(update.dataPackageMb).toBeGreaterThan(0); // sim_info trae el consumo completo
   });
