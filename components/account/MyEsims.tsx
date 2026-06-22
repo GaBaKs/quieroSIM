@@ -88,10 +88,16 @@ export default function MyEsims({ initialEsims, userId }: { initialEsims: MyEsim
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {esims.map((esim) => {
-            const usagePct =
-              esim.dataPackageMb && esim.dataUsedMb !== null
-                ? Math.min(100, Math.round((esim.dataUsedMb / esim.dataPackageMb) * 100))
-                : null;
+            // YeSim solo reporta data_package_mb/data_used_mb tras la activación;
+            // hasta entonces usamos el tamaño nominal del plan (dataAmount en GB)
+            // como denominador para mostrar igual el consumo (0 / X MB).
+            const packageMb =
+              esim.dataPackageMb ??
+              (esim.dataAmount && !Number.isNaN(Number(esim.dataAmount))
+                ? Math.round(Number(esim.dataAmount) * 1024)
+                : null);
+            const usedMb = esim.dataUsedMb ?? 0;
+            const usagePct = packageMb ? Math.min(100, Math.round((usedMb / packageMb) * 100)) : null;
             const resend = resendState[esim.id];
 
             return (
@@ -114,9 +120,9 @@ export default function MyEsims({ initialEsims, userId }: { initialEsims: MyEsim
                     <span className="flex items-center gap-1 font-bold uppercase tracking-wide text-slate-400">
                       <Signal className="h-3 w-3" /> {t('account.usage')}
                     </span>
-                    {esim.dataPackageMb ? (
+                    {packageMb ? (
                       <span>
-                        {Math.round(esim.dataUsedMb ?? 0)} / {Math.round(esim.dataPackageMb)} MB
+                        {Math.round(usedMb)} / {Math.round(packageMb)} MB
                       </span>
                     ) : (
                       <span>{t('account.noUsage')}</span>
