@@ -28,4 +28,17 @@ describe('buildAuthContext', () => {
     expect(buildAuthContext(user, profile, [], { sub_role: 'support_agent' }).adminSubRole).toBe('support_agent');
     expect(buildAuthContext(user, profile, [], { sub_role: 'otro' }).adminSubRole).toBeNull();
   });
+
+  it('deriva el rol "admin" de admin_profile aunque no esté en user_role', () => {
+    // Caso del usuario creado por panel: tiene admin_profile pero su user_role
+    // solo trae 'customer'. El gate debe verlo como admin.
+    const ctx = buildAuthContext(user, profile, [{ role: { name: 'customer' } }], { sub_role: 'super_admin' });
+    expect(ctx.roles).toContain('admin');
+    expect(ctx.adminSubRole).toBe('super_admin');
+  });
+
+  it('no duplica "admin" si ya viene en user_role', () => {
+    const ctx = buildAuthContext(user, profile, [{ role: { name: 'admin' } }], { sub_role: 'support_agent' });
+    expect(ctx.roles.filter((r) => r === 'admin')).toHaveLength(1);
+  });
 });

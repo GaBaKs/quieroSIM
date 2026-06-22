@@ -8,6 +8,17 @@ import { KeyRound } from 'lucide-react';
 import { useTheme } from '@/components/admin/ThemeProvider';
 import { useMounted } from '@/hooks/use-mounted';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import type { AuthError } from '@supabase/supabase-js';
+
+/** Mensaje según el error real de `updateUser` (422 = contraseña inválida, no link). */
+function messageFor(err: AuthError): string {
+  if (err.code === 'same_password') return 'La nueva contraseña tiene que ser distinta a la anterior.';
+  if (err.code === 'weak_password' || err.status === 422)
+    return 'La contraseña no cumple los requisitos: al menos 8 caracteres, con mayúsculas, minúsculas y números.';
+  if (err.code === 'session_not_found' || err.status === 401 || err.status === 403)
+    return 'El link de recuperación venció o ya se usó. Pedí uno nuevo desde "Recuperar contraseña".';
+  return 'No se pudo actualizar la contraseña. Abrí el link del email de nuevo.';
+}
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -31,10 +42,16 @@ export default function UpdatePasswordPage() {
     }
     setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setSubmitting(false);
+      setError('El link de recuperación venció o ya se usó. Pedí uno nuevo desde "Recuperar contraseña".');
+      return;
+    }
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
       setSubmitting(false);
-      setError('No se pudo actualizar la contraseña. Abrí el link del email de nuevo.');
+      setError(messageFor(updateError));
       return;
     }
     router.replace('/admin');

@@ -38,6 +38,14 @@ export function buildAuthContext(
       ? (adminRow.sub_role as AdminSubRole)
       : null;
 
+  // `admin_profile` es la ÚNICA fuente de verdad de "es admin" — lo mismo que
+  // is_admin() en RLS. Reflejamos su presencia como rol 'admin' para que el gate
+  // de la UI y las guards no dependan de un user_role 'admin' redundante (el seed
+  // lo ponía a mano, pero admin_grant_admin solo escribe admin_profile).
+  if (adminRow && !roles.includes('admin')) {
+    roles.push('admin');
+  }
+
   return { userId: user.id, email: user.email, profile, roles, adminSubRole };
 }
 

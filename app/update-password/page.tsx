@@ -7,6 +7,20 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { KeyRound } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import type { AuthError } from '@supabase/supabase-js';
+
+/**
+ * Traduce el error de `updateUser` a una clave i18n concreta. Supabase devuelve
+ * 422 cuando la contraseña no pasa validación (débil o igual a la anterior) —
+ * NO es un problema del link. Solo los errores de sesión ausente piden reabrir.
+ */
+function messageKeyFor(err: AuthError): string {
+  if (err.code === 'same_password') return 'auth.errorSamePassword';
+  if (err.code === 'weak_password' || err.status === 422) return 'auth.errorPasswordWeak';
+  if (err.code === 'session_not_found' || err.status === 401 || err.status === 403)
+    return 'auth.errorSessionExpired';
+  return 'auth.errorUpdate';
+}
 
 /** Nueva contraseña del usuario final (llega con sesión desde el link de recovery). */
 export default function UpdatePasswordPage() {
@@ -30,10 +44,17 @@ export default function UpdatePasswordPage() {
     }
     setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
+    // Confirmamos que el link de recovery dejó sesión activa antes de actualizar.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setSubmitting(false);
+      setError(t('auth.errorSessionExpired'));
+      return;
+    }
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {
       setSubmitting(false);
-      setError(t('auth.errorUpdate'));
+      setError(t(messageKeyFor(updateError)));
       return;
     }
     router.replace('/account');

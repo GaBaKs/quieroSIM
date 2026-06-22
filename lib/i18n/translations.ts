@@ -290,7 +290,10 @@ export const translations: Record<Language, any> = {
       updateSubtitle: 'Definí la contraseña nueva de tu cuenta.',
       saveBtn: 'Guardar contraseña',
       saving: 'Guardando…',
-      errorUpdate: 'No se pudo actualizar la contraseña. Abrí el link del email de nuevo.'
+      errorUpdate: 'No se pudo actualizar la contraseña. Abrí el link del email de nuevo.',
+      errorPasswordWeak: 'La contraseña no cumple los requisitos: al menos 8 caracteres, con mayúsculas, minúsculas y números.',
+      errorSamePassword: 'La nueva contraseña tiene que ser distinta a la anterior.',
+      errorSessionExpired: 'El link de recuperación venció o ya se usó. Pedí uno nuevo desde "Recuperar contraseña".'
     },
     account: {
       title: 'Mis eSIMs',
@@ -602,7 +605,10 @@ export const translations: Record<Language, any> = {
       updateSubtitle: 'Set the new password for your account.',
       saveBtn: 'Save password',
       saving: 'Saving…',
-      errorUpdate: 'Could not update the password. Open the email link again.'
+      errorUpdate: 'Could not update the password. Open the email link again.',
+      errorPasswordWeak: 'The password does not meet the requirements: at least 8 characters, with uppercase, lowercase and numbers.',
+      errorSamePassword: 'The new password must be different from the previous one.',
+      errorSessionExpired: 'The recovery link expired or was already used. Request a new one from "Forgot password".'
     },
     account: {
       title: 'My eSIMs',
@@ -914,7 +920,10 @@ export const translations: Record<Language, any> = {
       updateSubtitle: 'Defina a nova senha da sua conta.',
       saveBtn: 'Salvar senha',
       saving: 'Salvando…',
-      errorUpdate: 'Não foi possível atualizar a senha. Abra o link do e-mail novamente.'
+      errorUpdate: 'Não foi possível atualizar a senha. Abra o link do e-mail novamente.',
+      errorPasswordWeak: 'A senha não atende aos requisitos: pelo menos 8 caracteres, com maiúsculas, minúsculas e números.',
+      errorSamePassword: 'A nova senha precisa ser diferente da anterior.',
+      errorSessionExpired: 'O link de recuperação expirou ou já foi usado. Solicite um novo em "Recuperar senha".'
     },
     account: {
       title: 'Meus eSIMs',
