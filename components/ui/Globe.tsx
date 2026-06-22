@@ -307,11 +307,14 @@ export default function Globe({
       }
     }
 
-    animRef.current = requestAnimationFrame(draw);
   }, [dotColor, arcColor, markerColor, autoRotateSpeed, connections, markers]);
 
   useEffect(() => {
-    animRef.current = requestAnimationFrame(draw);
+    const loop = () => {
+      draw();
+      animRef.current = requestAnimationFrame(loop);
+    };
+    animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
   }, [draw]);
 

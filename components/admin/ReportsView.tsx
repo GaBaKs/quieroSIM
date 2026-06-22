@@ -2,94 +2,79 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import {
-  BarChart3,
-  DollarSign,
-  TrendingUp,
-  Download,
-  Calendar,
-  Filter,
-  Users,
-  RefreshCw,
-  FileText,
-} from 'lucide-react';
+import { BarChart3, DollarSign, TrendingUp, Download, Users, RefreshCw, FileText } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
 import { usd } from '@/components/admin/format';
+import ComingSoon from '@/components/admin/ComingSoon';
+import type { SalesReport, FinancePoint, RefundRow } from '@/server/actions/admin-reports';
 
-// ─── Mock data ──────────────────────────────────────────────────────────────
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split('-');
+  const idx = Number(m) - 1;
+  return MONTHS_ES[idx] ? `${MONTHS_ES[idx]} ${y}` : ym;
+}
 
-const MOCK_SALES_BY_MONTH = [
-  { month: 'Ene', sales: 145, revenue: 4350 },
-  { month: 'Feb', sales: 178, revenue: 5340 },
-  { month: 'Mar', sales: 210, revenue: 6300 },
-  { month: 'Abr', sales: 192, revenue: 5760 },
-  { month: 'May', sales: 265, revenue: 7950 },
-  { month: 'Jun', sales: 310, revenue: 9300 },
-];
-
-const MOCK_SALES_BY_COUNTRY = [
-  { country: 'Estados Unidos', sales: 320, revenue: 9600, pct: 28 },
-  { country: 'Europa Regional', sales: 280, revenue: 11200, pct: 24 },
-  { country: 'Brasil', sales: 150, revenue: 3750, pct: 13 },
-  { country: 'Japón', sales: 120, revenue: 4800, pct: 10 },
-  { country: 'México', sales: 95, revenue: 2375, pct: 8 },
-  { country: 'Otros', sales: 185, revenue: 5275, pct: 17 },
-];
-
-const MOCK_FINANCE_MONTHS = [
-  { month: 'Enero', income: 4350, cost: 2610, margin: 1740 },
-  { month: 'Febrero', income: 5340, cost: 3204, margin: 2136 },
-  { month: 'Marzo', income: 6300, cost: 3780, margin: 2520 },
-  { month: 'Abril', income: 5760, cost: 3456, margin: 2304 },
-  { month: 'Mayo', income: 7950, cost: 4770, margin: 3180 },
-  { month: 'Junio', income: 9300, cost: 5580, margin: 3720 },
-];
-
-const MOCK_AFFILIATE_REPORT = [
-  { name: 'Diego Fernández', sales: 215, commission: 4887.80, conversion: 3.2 },
-  { name: 'Martina López', sales: 87, commission: 2124.50, conversion: 2.8 },
-  { name: 'Valentina Ruiz', sales: 43, commission: 757.30, conversion: 1.9 },
-];
-
-const MOCK_REFUNDS = [
-  { id: 'REF-001', order: 'ORD-9c3d', customer: 'ana@hotmail.com', amount: 19.99, reason: 'Plan no utilizado — viaje cancelado', agent: 'Soporte 1', date: '2026-06-16T16:00:00Z' },
-  { id: 'REF-002', order: 'ORD-3b0c', customer: 'elena@gmail.com', amount: 17.99, reason: 'eSIM no compatible con dispositivo', agent: 'Soporte 1', date: '2026-06-10T12:00:00Z' },
-  { id: 'REF-003', order: 'ORD-1a2b', customer: 'carlos@gmail.com', amount: 34.99, reason: 'Error en la activación — fallo proveedor', agent: 'Admin', date: '2026-05-28T14:00:00Z' },
-];
-
-// ─── Component ──────────────────────────────────────────────────────────────
+function downloadCsv(filename: string, headers: string[], rows: (string | number)[][]): void {
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\n');
+  const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 type Tab = 'sales' | 'finance' | 'affiliates' | 'refunds';
 
-export default function ReportsView() {
+const card = 'bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10';
+const th = 'py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider';
+
+export default function ReportsView({
+  sales,
+  finance,
+  refunds,
+}: {
+  sales: SalesReport;
+  finance: FinancePoint[];
+  refunds: RefundRow[];
+}) {
   const [tab, setTab] = useState<Tab>('sales');
 
-  const totalRevenue = MOCK_FINANCE_MONTHS.reduce((s, m) => s + m.income, 0);
-  const totalCost = MOCK_FINANCE_MONTHS.reduce((s, m) => s + m.cost, 0);
-  const totalMargin = MOCK_FINANCE_MONTHS.reduce((s, m) => s + m.margin, 0);
-  const totalSales = MOCK_SALES_BY_MONTH.reduce((s, m) => s + m.sales, 0);
+  const totals = useMemo(() => {
+    const income = finance.reduce((s, f) => s + f.income, 0);
+    const refundsTotal = finance.reduce((s, f) => s + f.refunds, 0);
+    const net = finance.reduce((s, f) => s + f.net, 0);
+    const units = sales.byMonth.reduce((s, m) => s + m.units, 0);
+    return { income, refundsTotal, net, units };
+  }, [finance, sales]);
 
-  const maxRevenue = Math.max(...MOCK_SALES_BY_MONTH.map((m) => m.revenue));
+  const maxRevenue = Math.max(1, ...sales.byMonth.map((m) => m.revenue));
+  const countryTotal = Math.max(1, sales.byCountry.reduce((s, c) => s + c.revenue, 0));
 
   const tabs: { label: string; value: Tab; icon: typeof BarChart3 }[] = [
     { label: 'Ventas', value: 'sales', icon: BarChart3 },
     { label: 'Finanzas', value: 'finance', icon: DollarSign },
-    { label: 'Afiliados', value: 'affiliates', icon: Users },
     { label: 'Reembolsos', value: 'refunds', icon: RefreshCw },
+    { label: 'Afiliados', value: 'affiliates', icon: Users },
+  ];
+
+  const kpis = [
+    { label: 'Ingresos', value: usd(totals.income), icon: DollarSign, color: 'text-[#b3ff6b]' },
+    { label: 'Reembolsos', value: usd(totals.refundsTotal), icon: RefreshCw, color: 'text-red-400' },
+    { label: 'Neto', value: usd(totals.net), icon: BarChart3, color: 'text-[#9933c1]' },
+    { label: 'Ventas', value: String(totals.units), icon: FileText, color: 'text-blue-400' },
   ];
 
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Ingresos totales', value: usd(totalRevenue), icon: DollarSign, color: 'text-[#b3ff6b]' },
-          { label: 'Costo de ventas', value: usd(totalCost), icon: TrendingUp, color: 'text-orange-400' },
-          { label: 'Margen bruto', value: usd(totalMargin), icon: BarChart3, color: 'text-[#9933c1]' },
-          { label: 'Total ventas', value: String(totalSales), icon: FileText, color: 'text-blue-400' },
-        ].map((kpi, i) => (
+        {kpis.map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 p-5 flex items-start gap-4">
+            className={`${card} p-5 flex items-start gap-4`}>
             <div className={`p-2.5 rounded-xl bg-black/5 dark:bg-white/5 ${kpi.color}`}><kpi.icon className="h-5 w-5" /></div>
             <div>
               <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{kpi.label}</p>
@@ -113,53 +98,57 @@ export default function ReportsView() {
       {tab === 'sales' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Resumen de ventas 2026 — datos mock</p>
-            <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"><Download className="h-3.5 w-3.5" /> Exportar CSV</QuieroButton>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Ventas pagadas/emitidas (últimos 6 meses).</p>
+            <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"
+              onClick={() => downloadCsv('ventas-por-mes.csv', ['Mes', 'Unidades', 'Ingresos'], sales.byMonth.map((m) => [m.month, m.units, m.revenue]))}>
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </QuieroButton>
           </div>
 
-          {/* Bar Chart */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 p-6">
-            <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-4">Ingresos por mes</h3>
-            <div className="flex items-end gap-3 h-48">
-              {MOCK_SALES_BY_MONTH.map((m, i) => (
-                <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-[10px] font-bold text-zinc-500">{usd(m.revenue)}</span>
-                  <motion.div initial={{ height: 0 }} animate={{ height: `${(m.revenue / maxRevenue) * 100}%` }} transition={{ delay: i * 0.08, duration: 0.5 }}
-                    className="w-full bg-gradient-to-t from-[#9933c1] to-[#9933c1]/60 rounded-t-lg min-h-[4px]" />
-                  <span className="text-xs font-bold text-zinc-500">{m.month}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* By Country */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-            <table className="w-full text-left">
-              <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">País/Región</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Ventas</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Ingresos</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">%</th>
-              </tr></thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                {MOCK_SALES_BY_COUNTRY.map((c) => (
-                  <tr key={c.country} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{c.country}</td>
-                    <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300 text-right">{c.sales}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-[#b3ff6b] text-right">{usd(c.revenue)}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <div className="w-16 h-2 bg-zinc-100 dark:bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#9933c1] rounded-full" style={{ width: `${c.pct}%` }} />
-                        </div>
-                        <span className="text-xs font-bold text-zinc-500">{c.pct}%</span>
-                      </div>
-                    </td>
-                  </tr>
+          {sales.byMonth.length === 0 ? (
+            <div className={`${card} p-10 text-center text-sm text-zinc-500`}>Todavía no hay ventas en el período.</div>
+          ) : (
+            <div className={`${card} p-6`}>
+              <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wider mb-4">Ingresos por mes</h3>
+              <div className="flex items-end gap-3 h-48">
+                {sales.byMonth.map((m, i) => (
+                  <div key={m.month} className="flex-1 flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-bold text-zinc-500">{usd(m.revenue)}</span>
+                    <motion.div initial={{ height: 0 }} animate={{ height: `${(m.revenue / maxRevenue) * 100}%` }} transition={{ delay: i * 0.08, duration: 0.5 }}
+                      className="w-full bg-gradient-to-t from-[#9933c1] to-[#9933c1]/60 rounded-t-lg min-h-[4px]" />
+                    <span className="text-xs font-bold text-zinc-500">{monthLabel(m.month)}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          )}
+
+          {sales.byCountry.length > 0 && (
+            <div className={`${card} overflow-hidden`}>
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
+                  <th className={th}>País</th><th className={`${th} text-right`}>Ventas</th><th className={`${th} text-right`}>Ingresos</th><th className={`${th} text-right`}>%</th>
+                </tr></thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                  {sales.byCountry.map((c) => (
+                    <tr key={c.country} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{c.country}</td>
+                      <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300 text-right">{c.units}</td>
+                      <td className="py-3 px-4 text-sm font-bold text-[#b3ff6b] text-right">{usd(c.revenue)}</td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <div className="w-16 h-2 bg-zinc-100 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#9933c1] rounded-full" style={{ width: `${Math.round((c.revenue / countryTotal) * 100)}%` }} />
+                          </div>
+                          <span className="text-xs font-bold text-zinc-500">{Math.round((c.revenue / countryTotal) * 100)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -167,93 +156,83 @@ export default function ReportsView() {
       {tab === 'finance' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Informe financiero anual 2026 — datos mock para declaración fiscal LLC</p>
-            <div className="flex gap-2">
-              <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</QuieroButton>
-              <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> PDF</QuieroButton>
-            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Ingresos, reembolsos y neto por mes (valores exactos).</p>
+            <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"
+              onClick={() => downloadCsv('finanzas.csv', ['Mes', 'Ingresos', 'Reembolsos', 'Neto'], finance.map((f) => [f.month, f.income, f.refunds, f.net]))}>
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </QuieroButton>
           </div>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-            <table className="w-full text-left">
-              <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Mes</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Ingresos</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Costo ventas</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Margen bruto</th>
-              </tr></thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                {MOCK_FINANCE_MONTHS.map((m) => (
-                  <tr key={m.month} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{m.month}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-[#b3ff6b] text-right">{usd(m.income)}</td>
-                    <td className="py-3 px-4 text-sm text-red-500 text-right">{usd(m.cost)}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white text-right">{usd(m.margin)}</td>
+          {finance.length === 0 ? (
+            <div className={`${card} p-10 text-center text-sm text-zinc-500`}>Todavía no hay movimientos en el período.</div>
+          ) : (
+            <div className={`${card} overflow-hidden`}>
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
+                  <th className={th}>Mes</th><th className={`${th} text-right`}>Ingresos</th><th className={`${th} text-right`}>Reembolsos</th><th className={`${th} text-right`}>Neto</th>
+                </tr></thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                  {finance.map((f) => (
+                    <tr key={f.month} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{monthLabel(f.month)}</td>
+                      <td className="py-3 px-4 text-sm font-bold text-[#b3ff6b] text-right">{usd(f.income)}</td>
+                      <td className="py-3 px-4 text-sm text-red-500 text-right">{f.refunds > 0 ? `-${usd(f.refunds)}` : usd(0)}</td>
+                      <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white text-right">{usd(f.net)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-zinc-50 dark:bg-black/30 font-black">
+                    <td className="py-3 px-4 text-sm text-zinc-900 dark:text-white">TOTAL</td>
+                    <td className="py-3 px-4 text-sm text-[#b3ff6b] text-right">{usd(totals.income)}</td>
+                    <td className="py-3 px-4 text-sm text-red-500 text-right">{totals.refundsTotal > 0 ? `-${usd(totals.refundsTotal)}` : usd(0)}</td>
+                    <td className="py-3 px-4 text-sm text-zinc-900 dark:text-white text-right">{usd(totals.net)}</td>
                   </tr>
-                ))}
-                <tr className="bg-zinc-50 dark:bg-black/30 font-black">
-                  <td className="py-3 px-4 text-sm text-zinc-900 dark:text-white">TOTAL</td>
-                  <td className="py-3 px-4 text-sm text-[#b3ff6b] text-right">{usd(totalRevenue)}</td>
-                  <td className="py-3 px-4 text-sm text-red-500 text-right">{usd(totalCost)}</td>
-                  <td className="py-3 px-4 text-sm text-zinc-900 dark:text-white text-right">{usd(totalMargin)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Affiliates Tab */}
-      {tab === 'affiliates' && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[500px]">
-            <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Afiliado</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Ventas</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Comisión total</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Conversión %</th>
-            </tr></thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {MOCK_AFFILIATE_REPORT.map((a) => (
-                <tr key={a.name} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{a.name}</td>
-                  <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300 text-right">{a.sales}</td>
-                  <td className="py-3 px-4 text-sm font-bold text-[#b3ff6b] text-right">{usd(a.commission)}</td>
-                  <td className="py-3 px-4 text-sm font-bold text-[#9933c1] dark:text-[#b3ff6b] text-right">{a.conversion}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
       {/* Refunds Tab */}
       {tab === 'refunds' && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[600px]">
-            <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">ID</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Cliente</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Motivo</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Monto</th>
-              <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Agente</th>
-            </tr></thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {MOCK_REFUNDS.map((r) => (
-                <tr key={r.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="py-3 px-4 font-bold text-sm text-[#9933c1] dark:text-[#b3ff6b]">{r.id}</td>
-                  <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300">{r.customer}</td>
-                  <td className="py-3 px-4 text-sm text-zinc-500 max-w-[250px] truncate">{r.reason}</td>
-                  <td className="py-3 px-4 text-sm font-bold text-red-500 text-right">{usd(r.amount)}</td>
-                  <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300">{r.agent}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Reembolsos procesados.</p>
+            <QuieroButton variant="secondary" className="text-xs py-2 px-3 flex items-center gap-1.5"
+              onClick={() => downloadCsv('reembolsos.csv', ['Orden', 'Cliente', 'Monto', 'Fecha', 'Admin'],
+                refunds.map((r) => [r.orderId.slice(0, 8).toUpperCase(), r.customer, r.amount, new Date(r.refundedAt).toISOString(), r.adminEmail]))}>
+              <Download className="h-3.5 w-3.5" /> Exportar CSV
+            </QuieroButton>
           </div>
+          {refunds.length === 0 ? (
+            <div className={`${card} p-10 text-center text-sm text-zinc-500`}>No hay reembolsos registrados.</div>
+          ) : (
+            <div className={`${card} overflow-hidden`}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[640px]">
+                  <thead><tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
+                    <th className={th}>Orden</th><th className={th}>Cliente</th><th className={`${th} text-right`}>Monto</th><th className={th}>Fecha</th><th className={th}>Admin</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                    {refunds.map((r) => (
+                      <tr key={r.orderId} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                        <td className="py-3 px-4 font-bold text-sm text-[#9933c1] dark:text-[#b3ff6b]">#{r.orderId.slice(0, 8).toUpperCase()}</td>
+                        <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300">{r.customer}</td>
+                        <td className="py-3 px-4 text-sm font-bold text-red-500 text-right">-{usd(r.amount)}</td>
+                        <td className="py-3 px-4 text-sm text-zinc-500">{new Date(r.refundedAt).toLocaleDateString('es-AR')}</td>
+                        <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300">{r.adminEmail}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Affiliates Tab — módulo no construido (Fase 7, standby) */}
+      {tab === 'affiliates' && (
+        <ComingSoon title="Reporte de afiliados" description="El módulo de afiliados todavía no está disponible. Cuando se active, vas a ver acá las ventas y comisiones por afiliado." />
       )}
     </div>
   );

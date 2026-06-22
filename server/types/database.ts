@@ -1216,6 +1216,12 @@ export type Database = {
         Args: { p_days?: number }
         Returns: { day: string; total: number }[]
       }
+      admin_sales_report: { Args: { p_days?: number }; Returns: Json }
+      admin_finance_report: { Args: { p_months?: number }; Returns: Json }
+      admin_refunds_report: {
+        Args: { p_limit?: number }
+        Returns: { order_id: string; customer: string; amount: number; refunded_at: string; admin_email: string }[]
+      }
       claim_my_orders: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
