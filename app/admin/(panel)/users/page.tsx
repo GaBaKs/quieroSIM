@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { getUsers } from '@/server/actions/admin-users';
+import { getAuthContext } from '@/server/lib/auth';
 import StatusBadge from '@/components/admin/StatusBadge';
 import UserSearch from '@/components/admin/UserSearch';
+import CreateUserDialog from '@/components/admin/CreateUserDialog';
 import { shortDate } from '@/components/admin/format';
 
 /** Listado de usuarios con búsqueda. Server component. */
@@ -12,15 +14,19 @@ export default async function AdminUsersPage({
 }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
-  const result = await getUsers({ search: sp.search, page });
+  const [result, ctx] = await Promise.all([getUsers({ search: sp.search, page }), getAuthContext()]);
+  const isSuper = ctx?.adminSubRole === 'super_admin';
   const list = result.ok ? result.data : { rows: [], page: 1, pageSize: 20, total: 0 };
   const totalPages = Math.max(1, Math.ceil(list.total / list.pageSize));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">Usuarios</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Cuentas registradas, sus compras y estado.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">Usuarios</h1>
+          <p className="text-zinc-500 dark:text-zinc-400">Cuentas registradas, sus compras y estado.</p>
+        </div>
+        {isSuper && <CreateUserDialog />}
       </div>
 
       <UserSearch search={sp.search} />

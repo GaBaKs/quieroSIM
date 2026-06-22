@@ -8,6 +8,7 @@ import { logger } from '../lib/logger';
 import { createSupabaseServerClient } from '../db/supabase-server';
 import { requireAdmin, requireSuperAdmin } from '../lib/admin-guard';
 import { sanitizePostgrestSearch } from '../lib/sanitize';
+import { callEdgeFunctionAuthed } from '../lib/edge';
 
 /**
  * Gestión de usuarios. Lectura y suspender: cualquier admin (usr_prof_upd).
@@ -235,6 +236,29 @@ export async function setUserRoles(input: { userId: string; roles: string[] }): 
 
   await supabase.rpc('log_admin_action', { p_action: 'user_roles_update', p_payload: { user_id: userId, roles } });
   return ok({ roles });
+}
+
+const createUserSchema = z.object({
+  email: z.string().trim().email().max(120),
+  password: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres.')
+    .max(72)
+    .regex(/[a-z]/, 'Debe incluir una minúscula.')
+    .regex(/[A-Z]/, 'Debe incluir una mayúscula.')
+    .regex(/[0-9]/, 'Debe incluir un número.'),
+  role: z.enum(ASSIGNABLE_ROLES).default('customer'),
+});
+
+/** Crea un usuario nuevo (solo super_admin). La Admin API vive en la Edge
+ *  Function admin-users (service_role); el usuario queda activo (email_confirm). */
+export async function createUser(input: { email: string; password: string; role?: string }): Promise<Result<{ userId: string }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(createUserSchema, input);
+  if (!parsed.ok) return parsed;
+  // La Edge Function audita (audit_log user_created) con service_role.
+  return callEdgeFunctionAuthed<{ userId: string }>('admin-users/create', parsed.data);
 }
 
 function isUuid(v: string): boolean {

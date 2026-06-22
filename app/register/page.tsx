@@ -9,6 +9,7 @@ import { MailCheck, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Turnstile from '@/components/Turnstile';
+import GoogleButton from '@/components/GoogleButton';
 
 /**
  * Registro del usuario final (RF-AUTH-01: email+contraseña con verificación
@@ -149,6 +150,13 @@ function RegisterForm() {
                 </QuieroButton>
               </div>
             </form>
+
+            <div className="flex items-center gap-3 my-6">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs text-slate-400">o</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+            <GoogleButton next="/account" />
 
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-500">
