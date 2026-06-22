@@ -48,7 +48,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [copied, setCopied] = useState(false);
   // Cupón (Etapa 8A)
   const [couponInput, setCouponInput] = useState('');
-  const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [applied, setApplied] = useState<{ code: string; discount: number; finalPrice: number; minCharge: boolean } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
@@ -156,7 +156,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     const result = await previewCoupon({ code, planId: plan.id });
     setCouponLoading(false);
     if (result.ok) {
-      setApplied({ code: code.toUpperCase(), discount: result.data.discount });
+      setApplied({ code: code.toUpperCase(), discount: result.data.discount, finalPrice: result.data.finalPrice, minCharge: result.data.minChargeApplied });
     } else {
       setApplied(null);
       setCouponError(result.error.message);
@@ -272,7 +272,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                     <>
                       <div className="text-[10px] sm:text-xs text-slate-400 line-through font-sans">${plan.priceUSD} USD</div>
                       <div className="text-slate-900 font-sans font-bold text-base sm:text-xl">
-                        ${Math.max(0, plan.priceUSD - applied.discount).toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
+                        ${applied.finalPrice.toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
                       </div>
                     </>
                   ) : (
@@ -285,6 +285,13 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                   )}
                 </div>
               </div>
+
+              {applied?.minCharge && (
+                <p className="text-[10px] text-slate-500 flex items-start gap-1">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                  {t('checkout.minChargeNote')}
+                </p>
+              )}
 
               {/* Cupón (Etapa 8A) */}
               <div className="space-y-1.5">

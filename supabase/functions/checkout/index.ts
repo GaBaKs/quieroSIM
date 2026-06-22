@@ -99,6 +99,14 @@ Deno.serve(async (req: Request) => {
       discountApplied = Number(v.discount ?? 0);
       finalUsd = Math.max(0, priceUsd - discountApplied);
     }
+    // Stripe exige un cobro mínimo (~US$0,50). Si el descuento baja de ese piso,
+    // se cobra el mínimo (no se puede cobrar menos) y se ajusta el descuento real
+    // para que price_paid + discount_applied = precio del plan.
+    const MIN_CHARGE_USD = 0.5;
+    if (finalUsd < MIN_CHARGE_USD) {
+      finalUsd = MIN_CHARGE_USD;
+      discountApplied = Math.round((priceUsd - finalUsd) * 100) / 100;
+    }
     const amountMinor = Math.round(finalUsd * 100);
 
     // Orden pending (guest_email SIEMPRE: es el canal de entrega y de status).

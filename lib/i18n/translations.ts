@@ -251,6 +251,7 @@ export const translations: Record<Language, any> = {
       couponPlaceholder: 'Código de cupón',
       couponApply: 'Aplicar',
       couponApplied: 'Cupón {code} · -${amount} USD',
+      minChargeNote: 'El cobro mínimo es US$0,50, así que el total quedó en ese valor (el cupón cubrió el resto).',
       couponRemove: 'Quitar'
     },
     auth: {
@@ -566,6 +567,7 @@ export const translations: Record<Language, any> = {
       couponPlaceholder: 'Coupon code',
       couponApply: 'Apply',
       couponApplied: 'Coupon {code} · -${amount} USD',
+      minChargeNote: 'The minimum charge is US$0.50, so the total was set to that amount (the coupon covered the rest).',
       couponRemove: 'Remove'
     },
     auth: {
@@ -881,6 +883,7 @@ export const translations: Record<Language, any> = {
       couponPlaceholder: 'Código do cupom',
       couponApply: 'Aplicar',
       couponApplied: 'Cupom {code} · -${amount} USD',
+      minChargeNote: 'A cobrança mínima é US$0,50, então o total ficou nesse valor (o cupom cobriu o restante).',
       couponRemove: 'Remover'
     },
     auth: {

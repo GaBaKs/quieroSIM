@@ -41,7 +41,12 @@ const previewCouponSchema = z.object({
 export interface CouponPreview {
   discount: number;
   finalPrice: number;
+  /** true si el descuento bajó del mínimo de Stripe (US$0,50) y se cobra el mínimo. */
+  minChargeApplied: boolean;
 }
+
+/** Cobro mínimo de Stripe (USD). No se puede cobrar menos que esto. */
+const MIN_CHARGE_USD = 0.5;
 
 const orderStatusSchema = z.object({
   orderId: z.string().uuid(),
@@ -138,5 +143,7 @@ export async function previewCoupon(input: { code: string; planId: string }): Pr
   if (!v?.valid) return err('COUPON_INVALID', v?.reason ?? 'El cupón no es válido.');
 
   const discount = Number(v.discount ?? 0);
-  return ok({ discount, finalPrice: Math.max(0, subtotal - discount) });
+  const raw = Math.max(0, subtotal - discount);
+  const finalPrice = raw < MIN_CHARGE_USD ? MIN_CHARGE_USD : raw;
+  return ok({ discount, finalPrice, minChargeApplied: raw < MIN_CHARGE_USD });
 }
