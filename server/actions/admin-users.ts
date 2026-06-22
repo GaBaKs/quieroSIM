@@ -7,6 +7,7 @@ import { parseInput } from '../lib/validation';
 import { logger } from '../lib/logger';
 import { createSupabaseServerClient } from '../db/supabase-server';
 import { requireAdmin, requireSuperAdmin } from '../lib/admin-guard';
+import { sanitizePostgrestSearch } from '../lib/sanitize';
 
 /**
  * Gestión de usuarios. Lectura y suspender: cualquier admin (usr_prof_upd).
@@ -59,7 +60,10 @@ export async function getUsers(input: { search?: string; page?: number }): Promi
     .order('created_at', { ascending: false })
     .range((page - 1) * USER_PAGE_SIZE, page * USER_PAGE_SIZE - 1);
 
-  if (search) query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+  if (search) {
+    const s = sanitizePostgrestSearch(search);
+    query = query.or(`email.ilike.%${s}%,full_name.ilike.%${s}%`);
+  }
 
   const { data, error, count } = await query;
   if (error) {

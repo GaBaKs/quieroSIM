@@ -8,6 +8,7 @@ import { logger } from '../lib/logger';
 import { createSupabaseServerClient } from '../db/supabase-server';
 import { requireAdmin, requireSuperAdmin } from '../lib/admin-guard';
 import { callEdgeFunctionAuthed } from '../lib/edge';
+import { sanitizePostgrestSearch } from '../lib/sanitize';
 
 /**
  * Gestión de órdenes del admin. Lecturas con RLS de admin (ord_sel = is_admin);
@@ -67,8 +68,10 @@ export async function getOrders(input: {
 
   if (status) query = query.eq('status', status);
   if (search) {
-    // Búsqueda por email o por id (uuid exacto o prefijo).
-    query = query.or(`guest_email.ilike.%${search}%,id.eq.${isUuid(search) ? search : ZERO_UUID}`);
+    // Búsqueda por email o por id. El email se sanea antes de interpolarlo en
+    // el `.or()` (anti-inyección de filtro); el id va por isUuid (regex estricta).
+    const s = sanitizePostgrestSearch(search);
+    query = query.or(`guest_email.ilike.%${s}%,id.eq.${isUuid(search) ? search : ZERO_UUID}`);
   }
 
   const { data, error, count } = await query;
