@@ -34,6 +34,17 @@ Deno.serve(async (req: Request) => {
 
   // ── /create ───────────────────────────────────────────────────────────────
   if (route === 'create') {
+    // Rate limit por IP (anti-abuso/spam de pagos): 15 órdenes por minuto.
+    const ip = (req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'unknown').trim();
+    const { data: allowed } = await supabase.rpc('rate_limit_hit', {
+      p_bucket: `checkout:${ip}`,
+      p_max: 15,
+      p_window_seconds: 60,
+    });
+    if (allowed === false) {
+      return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento y probá de nuevo.', 429);
+    }
+
     const { planId, email, fullName, phone, acceptTerms, lang, couponCode } = body as {
       planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string;
     };
