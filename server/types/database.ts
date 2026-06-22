@@ -917,39 +917,30 @@ export type Database = {
         Row: {
           commission_l1_pct: number | null
           commission_l2_pct: number | null
-          default_currency: string | null
           default_margin_pct: number | null
           id: number
           min_withdrawal_usd: number | null
           price_alert_threshold_pct: number | null
-          store_name: string | null
-          support_email: string | null
           updated_at: string | null
           wholesale_margin_pct: number | null
         }
         Insert: {
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
-          default_currency?: string | null
           default_margin_pct?: number | null
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
-          store_name?: string | null
-          support_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }
         Update: {
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
-          default_currency?: string | null
           default_margin_pct?: number | null
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
-          store_name?: string | null
-          support_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }

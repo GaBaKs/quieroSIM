@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createYesimClient } from '../_shared/yesim/client.ts';
 import { createYesimMock } from '../_shared/yesim/mock/handler.ts';
+import { createResendClient } from '../_shared/email/resend.ts';
+import { renderPriceAlertEmail } from '../_shared/email/templates.ts';
 
 /**
  * Cron de sincronización de catálogo (RF-CAT, RF-PRC-01/03/06).
@@ -133,6 +135,46 @@ Deno.serve(async (req: Request) => {
       actor_type: 'system_cron',
       payload: { source: 'sync-catalog', threshold_pct: priceAlertThresholdPct, alerts },
     });
+
+    // Aviso por email a los super_admins (Resend; necesita EMAIL_FROM con el
+    // dominio verificado para llegar a casillas externas). Sin key, se omite.
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    if (apiKey) {
+      try {
+        const { data: superRows } = await supabase
+          .from('admin_profile')
+          .select('user_id')
+          .eq('sub_role', 'super_admin');
+        const superIds = (superRows ?? []).map((r) => r.user_id as string);
+        const { data: profiles } = superIds.length
+          ? await supabase.from('user_profile').select('email').in('id', superIds)
+          : { data: [] as Array<{ email: string | null }> };
+        const emails = (profiles ?? [])
+          .map((p) => p.email)
+          .filter((e): e is string => typeof e === 'string' && e.length > 0);
+        if (emails.length > 0) {
+          const resend = createResendClient({
+            apiKey,
+            from: Deno.env.get('EMAIL_FROM') ?? 'QuieroSIM <onboarding@resend.dev>',
+          });
+          const { subject, html } = renderPriceAlertEmail({
+            thresholdPct: priceAlertThresholdPct,
+            alerts: alerts.map((a) => ({
+              plan_name: String(a.plan_name),
+              old_cost: Number(a.old_cost),
+              new_cost: Number(a.new_cost),
+              pct_change: Number(a.pct_change),
+            })),
+          });
+          for (const to of emails) {
+            await resend.sendEmail({ to, subject, html });
+          }
+        }
+      } catch (e) {
+        // No frenar el sync por el email; solo registrar el motivo.
+        console.error('price_alert email error', e instanceof Error ? e.message : String(e));
+      }
+    }
   }
 
   // Planes activos que ya no vienen en el feed → inactivos (no se venden más).

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Globe, Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield } from 'lucide-react';
+import { Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import {
@@ -15,7 +15,7 @@ import {
   type AdminAccount,
 } from '@/server/actions/admin-settings';
 
-type Tab = 'general' | 'margins' | 'affiliates' | 'admins';
+type Tab = 'margins' | 'affiliates' | 'admins';
 type SubRole = 'super_admin' | 'support_agent';
 
 const inputCls =
@@ -25,12 +25,9 @@ const cardCls = 'bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 da
 
 export default function SettingsView({ settings, admins }: { settings: PlatformSettings; admins: AdminAccount[] }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('general');
+  const [tab, setTab] = useState<Tab>('margins');
 
   const [form, setForm] = useState<Record<keyof PlatformSettings, string>>({
-    storeName: settings.storeName,
-    supportEmail: settings.supportEmail,
-    defaultCurrency: settings.defaultCurrency,
     defaultMarginPct: String(settings.defaultMarginPct),
     wholesaleMarginPct: String(settings.wholesaleMarginPct),
     priceAlertThresholdPct: String(settings.priceAlertThresholdPct),
@@ -48,9 +45,6 @@ export default function SettingsView({ settings, admins }: { settings: PlatformS
     setSaving(true);
     setError(null);
     const res = await updateSettings({
-      storeName: form.storeName,
-      supportEmail: form.supportEmail,
-      defaultCurrency: form.defaultCurrency,
       defaultMarginPct: Number(form.defaultMarginPct),
       wholesaleMarginPct: Number(form.wholesaleMarginPct),
       priceAlertThresholdPct: Number(form.priceAlertThresholdPct),
@@ -96,8 +90,7 @@ export default function SettingsView({ settings, admins }: { settings: PlatformS
     else setAdminError(res.error.message);
   };
 
-  const tabs: { label: string; value: Tab; icon: typeof Globe }[] = [
-    { label: 'General', value: 'general', icon: Globe },
+  const tabs: { label: string; value: Tab; icon: typeof Percent }[] = [
     { label: 'Márgenes y alertas', value: 'margins', icon: Percent },
     { label: 'Afiliados', value: 'affiliates', icon: Users },
     { label: 'Administradores', value: 'admins', icon: Shield },
@@ -122,29 +115,6 @@ export default function SettingsView({ settings, admins }: { settings: PlatformS
 
       {error && tab !== 'admins' && (
         <p className="text-sm text-red-500 bg-red-50 dark:bg-red-400/10 rounded-xl p-3 max-w-xl">{error}</p>
-      )}
-
-      {/* General */}
-      {tab === 'general' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardCls}>
-          <div>
-            <label className={labelCls}>Nombre de la tienda</label>
-            <input type="text" value={form.storeName} onChange={(e) => set('storeName', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Email de soporte</label>
-            <input type="email" value={form.supportEmail} onChange={(e) => set('supportEmail', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Moneda principal</label>
-            <select value={form.defaultCurrency} onChange={(e) => set('defaultCurrency', e.target.value)} className={inputCls}>
-              <option value="USD">USD — Dólar estadounidense</option>
-              <option value="EUR">EUR — Euro</option>
-              <option value="ARS">ARS — Peso argentino</option>
-            </select>
-          </div>
-          {SaveButton}
-        </motion.div>
       )}
 
       {/* Márgenes y alertas */}

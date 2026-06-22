@@ -15,9 +15,6 @@ import { requireSuperAdmin } from '../lib/admin-guard';
  */
 
 export interface PlatformSettings {
-  storeName: string;
-  supportEmail: string;
-  defaultCurrency: string;
   defaultMarginPct: number;
   wholesaleMarginPct: number;
   priceAlertThresholdPct: number;
@@ -36,9 +33,6 @@ export interface AdminAccount {
 
 function mapSettings(d: Record<string, unknown>): PlatformSettings {
   return {
-    storeName: (d.store_name as string) ?? '',
-    supportEmail: (d.support_email as string) ?? '',
-    defaultCurrency: (d.default_currency as string) ?? 'USD',
     defaultMarginPct: Number(d.default_margin_pct ?? 0),
     wholesaleMarginPct: Number(d.wholesale_margin_pct ?? 0),
     priceAlertThresholdPct: Number(d.price_alert_threshold_pct ?? 0),
@@ -62,9 +56,6 @@ export async function getSettings(): Promise<Result<PlatformSettings>> {
 }
 
 const settingsSchema = z.object({
-  storeName: z.string().trim().min(1).max(80),
-  supportEmail: z.string().trim().email().max(120),
-  defaultCurrency: z.enum(['USD', 'EUR', 'ARS']),
   defaultMarginPct: z.number().min(0).max(1000),
   wholesaleMarginPct: z.number().min(0).max(1000),
   priceAlertThresholdPct: z.number().min(0).max(100),
@@ -84,9 +75,6 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
   const { error } = await supabase
     .from('platform_settings')
     .update({
-      store_name: s.storeName,
-      support_email: s.supportEmail,
-      default_currency: s.defaultCurrency,
       default_margin_pct: s.defaultMarginPct,
       wholesale_margin_pct: s.wholesaleMarginPct,
       price_alert_threshold_pct: s.priceAlertThresholdPct,
