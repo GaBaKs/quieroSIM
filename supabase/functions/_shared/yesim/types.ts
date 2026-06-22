@@ -201,7 +201,9 @@ export function normalizePlan(raw: RawYesimPlan): YesimPlan {
   return {
     id: raw.id,
     oldId: raw.old_id === null ? null : Number(raw.old_id),
-    name: raw.name,
+    // YeSim agrega un sufijo de versión "_YYYYMMDD" al nombre; lo sacamos para
+    // el display ("Ukraine 0.49GB_20250318" → "Ukraine 0.49GB").
+    name: raw.name.replace(/_\d{8}$/, ''),
     days: Number(raw.days),
     price: Number(raw.price),
     dataGb: Number(raw.data),

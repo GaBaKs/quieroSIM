@@ -52,6 +52,10 @@ Deno.serve(async (req: Request) => {
   const defaultMarginPct = Number(settings?.default_margin_pct ?? DEFAULT_MARGIN_PCT);
   const priceAlertThresholdPct = Number(settings?.price_alert_threshold_pct ?? PRICE_ALERT_THRESHOLD_PCT);
 
+  // Marca de inicio: los planes del feed se upsertean con last_sync_at >= runStart;
+  // los que ya no aparezcan quedan con un timestamp viejo y se desactivan al final.
+  const runStart = new Date().toISOString();
+
   const plansResult = await yesim.getPlans();
   if (!plansResult.ok) {
     return Response.json({ ok: false, error: plansResult.error }, { status: 502 });
@@ -178,13 +182,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // Planes activos que ya no vienen en el feed → inactivos (no se venden más).
-  const feedIds = feed.map((p) => p.id);
-  const { data: deactivated } = await supabase
+  // Se detectan por last_sync_at < runStart (no se tocaron en esta corrida).
+  // Antes se usaba un in.(...) con todos los ids, que fallaba por largo de URL.
+  const { data: deactivated, error: deactivateErr } = await supabase
     .from('plan')
     .update({ status: 'inactive' })
     .eq('status', 'active')
-    .not('yesim_id', 'in', `(${feedIds.map((id) => `"${id}"`).join(',')})`)
+    .lt('last_sync_at', runStart)
     .select('id');
+  if (deactivateErr) return Response.json({ ok: false, error: deactivateErr.message }, { status: 500 });
   stats.deactivated = deactivated?.length ?? 0;
 
   return Response.json({ ok: true, source: useMock ? 'mock' : 'yesim', stats });
