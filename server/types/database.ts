@@ -1259,6 +1259,7 @@ export type Database = {
       admin_set_admin_sub_role: { Args: { p_user_id: string; p_sub_role: string }; Returns: Json }
       admin_revoke_admin: { Args: { p_user_id: string }; Returns: Json }
       claim_my_orders: { Args: never; Returns: number }
+      claim_order: { Args: { p_order_ref: string; p_email: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       log_admin_action: { Args: { p_action: string; p_payload?: Json }; Returns: undefined }

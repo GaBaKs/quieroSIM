@@ -12,6 +12,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { QRCodeSVG } from 'qrcode.react';
 import { createCheckout, getOrderStatus, previewCoupon, type CheckoutSession, type OrderStatusInfo } from '@/server/actions/checkout';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -50,7 +51,23 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const pollCount = useRef(0);
+
+  // ¿El comprador NO tiene sesión? Si tiene cuenta, conviene loguearse para que
+  // la compra quede vinculada (si no, queda como guest y hay que reclamarla).
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    createSupabaseBrowserClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (active) setIsGuest(!data.user);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -225,6 +242,18 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
           {/* Step 1: datos de entrega + T&C */}
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 scrollbar-thin">
+              {isGuest && (
+                <div className="rounded-xl bg-[var(--color-violet)]/[0.06] border border-[var(--color-violet)]/15 p-3 text-[11px] sm:text-xs text-slate-600">
+                  {t('checkout.guestHint')}{' '}
+                  <Link
+                    href={`/login${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                    className="font-bold text-[var(--color-violet)] hover:underline"
+                  >
+                    {t('checkout.guestHintCta')}
+                  </Link>
+                </div>
+              )}
+
               {/* Product Review Card */}
               <div className="rounded-xl bg-[var(--color-violet)]/[0.04] border border-[var(--color-violet)]/11 p-3 sm:p-4 flex justify-between items-center">
                 <div>

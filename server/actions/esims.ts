@@ -48,6 +48,39 @@ export async function claimMyOrders(): Promise<Result<{ claimed: number }>> {
   return ok({ claimed: (data as number | null) ?? 0 });
 }
 
+const claimOrderSchema = z.object({
+  orderRef: z.string().trim().min(6, 'Ingresá el número de orden.').max(40),
+  email: z.string().trim().email('Email inválido.'),
+});
+
+/**
+ * Vincula manualmente una compra hecha con OTRO email (la que claim_my_orders no
+ * matchea). El usuario prueba la compra con el número de orden del comprobante
+ * (código corto o UUID) + el email. El candado y la auditoría viven en la RPC.
+ */
+export async function claimOrder(input: { orderRef: string; email: string }): Promise<Result<{ ok: true }>> {
+  const parsed = parseInput(claimOrderSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return err(ErrorCodes.UNAUTHORIZED, 'No hay una sesión activa.');
+
+  const { data, error } = await supabase.rpc('claim_order', {
+    p_order_ref: parsed.data.orderRef,
+    p_email: parsed.data.email,
+  });
+  if (error) {
+    logger.error('claimOrder falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos vincular la compra. Intentá de nuevo.');
+  }
+  const r = data as { ok: boolean; reason?: string };
+  if (!r?.ok) return err(ErrorCodes.VALIDATION, r?.reason ?? 'No pudimos vincular la compra.');
+  return ok({ ok: true });
+}
+
 /** eSIMs del usuario logueado (RLS), más recientes primero. */
 export async function getMyEsims(): Promise<Result<MyEsim[]>> {
   const supabase = await createSupabaseServerClient();

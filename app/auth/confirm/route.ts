@@ -34,6 +34,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (ok) {
+    // Vincular las compras guest hechas con el email del usuario (idempotente).
+    // Cubre login con Google + confirmación de email + recovery, en el momento
+    // exacto en que la sesión queda activa.
+    await supabase.rpc('claim_my_orders');
     redirect(nextPath);
   }
 

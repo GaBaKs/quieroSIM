@@ -8,6 +8,7 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { Lock } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { claimMyOrders } from '@/server/actions/esims';
 import Turnstile from '@/components/Turnstile';
 import GoogleButton from '@/components/GoogleButton';
 
@@ -42,7 +43,10 @@ function LoginForm() {
       );
       return;
     }
-    
+
+    // Vincular las compras guest hechas con este email (idempotente).
+    await claimMyOrders();
+
     // Check if the user is an admin
     const { data: adminData } = await supabase
       .from('admin_profile')

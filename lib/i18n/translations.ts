@@ -197,6 +197,8 @@ export const translations: Record<Language, any> = {
     checkout: {
       title: 'Compra Segura eSIM',
       selectedPlan: 'Plan Seleccionado',
+      guestHint: '¿Ya tenés cuenta?',
+      guestHintCta: 'Iniciá sesión para guardar tu compra',
       validFor: 'Válido por {days} días · Activación por QR en 2 min',
       deliveryInfo: '1. Datos de Entrega',
       email: 'Correo Electrónico',
@@ -507,6 +509,8 @@ export const translations: Record<Language, any> = {
     checkout: {
       title: 'Secure eSIM Purchase',
       selectedPlan: 'Selected Plan',
+      guestHint: 'Already have an account?',
+      guestHintCta: 'Log in to save your purchase',
       validFor: 'Valid for {days} days · QR Activation in 2 min',
       deliveryInfo: '1. Delivery Details',
       email: 'Email',
@@ -817,6 +821,8 @@ export const translations: Record<Language, any> = {
     checkout: {
       title: 'Compra Segura eSIM',
       selectedPlan: 'Plano Selecionado',
+      guestHint: 'Já tem conta?',
+      guestHintCta: 'Entre para salvar sua compra',
       validFor: 'Válido por {days} dias · Ativação por QR em 2 min',
       deliveryInfo: '1. Dados de Envio',
       email: 'E-mail',

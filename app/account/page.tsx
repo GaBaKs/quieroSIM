@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/server/db/supabase-server';
 import { claimMyOrders, getMyEsims } from '@/server/actions/esims';
 import MyEsims from '@/components/account/MyEsims';
+import ClaimPurchase from '@/components/account/ClaimPurchase';
 
 /**
  * "Mis eSIMs": al cargar, reclama las compras guest hechas con el email del
@@ -19,5 +20,10 @@ export default async function AccountPage() {
   const result = await getMyEsims();
   const esims = result.ok ? result.data : [];
 
-  return <MyEsims initialEsims={esims} userId={user.id} />;
+  return (
+    <div className="space-y-6">
+      <MyEsims initialEsims={esims} userId={user.id} />
+      <ClaimPurchase />
+    </div>
+  );
 }
