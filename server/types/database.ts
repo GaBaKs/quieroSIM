@@ -913,6 +913,48 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          commission_l1_pct: number | null
+          commission_l2_pct: number | null
+          default_currency: string | null
+          default_margin_pct: number | null
+          id: number
+          min_withdrawal_usd: number | null
+          price_alert_threshold_pct: number | null
+          store_name: string | null
+          support_email: string | null
+          updated_at: string | null
+          wholesale_margin_pct: number | null
+        }
+        Insert: {
+          commission_l1_pct?: number | null
+          commission_l2_pct?: number | null
+          default_currency?: string | null
+          default_margin_pct?: number | null
+          id?: number
+          min_withdrawal_usd?: number | null
+          price_alert_threshold_pct?: number | null
+          store_name?: string | null
+          support_email?: string | null
+          updated_at?: string | null
+          wholesale_margin_pct?: number | null
+        }
+        Update: {
+          commission_l1_pct?: number | null
+          commission_l2_pct?: number | null
+          default_currency?: string | null
+          default_margin_pct?: number | null
+          id?: number
+          min_withdrawal_usd?: number | null
+          price_alert_threshold_pct?: number | null
+          store_name?: string | null
+          support_email?: string | null
+          updated_at?: string | null
+          wholesale_margin_pct?: number | null
+        }
+        Relationships: []
+      }
       role: {
         Row: {
           description: string | null
@@ -1222,6 +1264,9 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: { order_id: string; customer: string; amount: number; refunded_at: string; admin_email: string }[]
       }
+      admin_grant_admin: { Args: { p_email: string; p_sub_role: string }; Returns: Json }
+      admin_set_admin_sub_role: { Args: { p_user_id: string; p_sub_role: string }; Returns: Json }
+      admin_revoke_admin: { Args: { p_user_id: string }; Returns: Json }
       claim_my_orders: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }

@@ -11,6 +11,9 @@ import { createYesimMock } from '../_shared/yesim/mock/handler.ts';
  *   admin llega en Etapa 6 con Resend).
  * - Planes que desaparecen del feed → status 'inactive'.
  * En dev YESIM_BASE_URL=mock (o ausente) usa el mock in-process: cero red, cero saldo.
+ *
+ * El margen default y el umbral de alerta se leen de platform_settings (editables
+ * desde el panel admin); estas constantes quedan como fallback si la fila falta.
  */
 
 const PRICE_ALERT_THRESHOLD_PCT = 5;
@@ -37,6 +40,15 @@ Deno.serve(async (req: Request) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  // Settings editables desde el panel admin (fallback a las constantes).
+  const { data: settings } = await supabase
+    .from('platform_settings')
+    .select('default_margin_pct, price_alert_threshold_pct')
+    .eq('id', 1)
+    .maybeSingle();
+  const defaultMarginPct = Number(settings?.default_margin_pct ?? DEFAULT_MARGIN_PCT);
+  const priceAlertThresholdPct = Number(settings?.price_alert_threshold_pct ?? PRICE_ALERT_THRESHOLD_PCT);
 
   const plansResult = await yesim.getPlans();
   if (!plansResult.ok) {
@@ -88,7 +100,7 @@ Deno.serve(async (req: Request) => {
       const { error } = await supabase.from('plan_pricing').insert({
         plan_id: planRow.id,
         cost_provider_eur: plan.price,
-        margin_pct: DEFAULT_MARGIN_PCT,
+        margin_pct: defaultMarginPct,
         price_final: 0,
       });
       if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
@@ -102,7 +114,7 @@ Deno.serve(async (req: Request) => {
         .eq('plan_id', planRow.id);
       if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
       stats.costUpdated += 1;
-      if (pctChange >= PRICE_ALERT_THRESHOLD_PCT) {
+      if (pctChange >= priceAlertThresholdPct) {
         stats.priceAlerts += 1;
         alerts.push({
           yesim_id: plan.id,
@@ -119,7 +131,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from('audit_log').insert({
       action: 'price_alert',
       actor_type: 'system_cron',
-      payload: { source: 'sync-catalog', threshold_pct: PRICE_ALERT_THRESHOLD_PCT, alerts },
+      payload: { source: 'sync-catalog', threshold_pct: priceAlertThresholdPct, alerts },
     });
   }
 
