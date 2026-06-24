@@ -1,16 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Pencil, X } from 'lucide-react';
+import { Loader2, Pencil, Star, X } from 'lucide-react';
 import { usd } from './format';
-import { updatePlanPricing, setPlanStatus, type AdminPlanRow } from '@/server/actions/admin-plans';
+import { updatePlanPricing, setPlanStatus, setPlanRecommended, type AdminPlanRow } from '@/server/actions/admin-plans';
 
 export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow[]; isSuperAdmin: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState<AdminPlanRow | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [recId, setRecId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [onlyRec, setOnlyRec] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return plans.filter((p) => {
+      if (onlyRec && !p.isRecommended) return false;
+      if (!q) return true;
+      return p.name.toLowerCase().includes(q) || (p.countryRegion ?? '').toLowerCase().includes(q);
+    });
+  }, [plans, query, onlyRec]);
+  const CAP = 200;
+  const shown = filtered.slice(0, CAP);
 
   const toggleStatus = async (plan: AdminPlanRow) => {
     setTogglingId(plan.id);
@@ -20,8 +34,29 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
     router.refresh();
   };
 
+  const toggleRecommended = async (plan: AdminPlanRow) => {
+    setRecId(plan.id);
+    await setPlanRecommended({ planId: plan.id, value: !plan.isRecommended });
+    setRecId(null);
+    router.refresh();
+  };
+
   return (
     <>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por país o nombre del plan…"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#9933c1]"
+        />
+        <label className="flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none whitespace-nowrap">
+          <input type="checkbox" checked={onlyRec} onChange={(e) => setOnlyRec(e.target.checked)} className="h-4 w-4 rounded accent-[#9933c1]" />
+          Solo recomendados
+        </label>
+        <span className="text-xs text-zinc-400 whitespace-nowrap">{filtered.length} de {plans.length}</span>
+      </div>
+
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[820px]">
@@ -36,10 +71,13 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-              {plans.map((p) => (
+              {shown.map((p) => (
                 <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                   <td className="py-3 px-4">
-                    <div className="font-bold text-zinc-900 dark:text-zinc-100">{p.name}</div>
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                      {p.isRecommended && <Star className="h-3.5 w-3.5 fill-[#9933c1] text-[#9933c1] shrink-0" />}
+                      {p.name}
+                    </div>
                     <div className="text-xs text-zinc-400">{p.countryRegion ?? '—'} · {p.dataAmount ?? '—'} · {p.durationDays ?? '—'}d</div>
                   </td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">{p.costEur !== null ? `€${p.costEur}` : '—'}</td>
@@ -59,6 +97,14 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                   {isSuperAdmin && (
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggleRecommended(p)}
+                          disabled={recId === p.id}
+                          title={p.isRecommended ? 'Quitar recomendado' : 'Marcar como recomendado'}
+                          className="flex items-center justify-center rounded-lg border border-zinc-200 dark:border-white/10 px-2 py-1.5 hover:border-[#9933c1]/50 transition disabled:opacity-50 cursor-pointer"
+                        >
+                          {recId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className={`h-3.5 w-3.5 ${p.isRecommended ? 'fill-[#9933c1] text-[#9933c1]' : 'text-zinc-400'}`} />}
+                        </button>
                         <button
                           onClick={() => setEditing(p)}
                           className="flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:border-[#9933c1]/50 transition cursor-pointer"
@@ -81,6 +127,10 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
           </table>
         </div>
       </div>
+
+      {filtered.length > CAP && (
+        <p className="text-xs text-zinc-400">Mostrando los primeros {CAP} de {filtered.length}. Refiná la búsqueda para ver más.</p>
+      )}
 
       {editing && <PriceEditor plan={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
     </>

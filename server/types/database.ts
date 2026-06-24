@@ -695,6 +695,7 @@ export type Database = {
           fup_threshold_gb: number | null
           id: string
           is_fup: boolean | null
+          is_recommended: boolean
           iso_country: string | null
           last_sync_at: string | null
           name: string
@@ -713,6 +714,7 @@ export type Database = {
           fup_threshold_gb?: number | null
           id?: string
           is_fup?: boolean | null
+          is_recommended?: boolean
           iso_country?: string | null
           last_sync_at?: string | null
           name: string
@@ -731,6 +733,7 @@ export type Database = {
           fup_threshold_gb?: number | null
           id?: string
           is_fup?: boolean | null
+          is_recommended?: boolean
           iso_country?: string | null
           last_sync_at?: string | null
           name?: string

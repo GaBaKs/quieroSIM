@@ -25,6 +25,7 @@ export interface CatalogPlanRow {
   is_fup: boolean | null;
   operators: string | null;
   price_final: number | null; // de la vista catalog_pricing
+  is_recommended?: boolean | null; // marca manual del admin (override del auto-popular)
 }
 
 /** Features con frases que lib/i18n/featureTranslator ya sabe traducir. */
@@ -51,6 +52,7 @@ function mapPlan(row: CatalogPlanRow, destination: DestinationRow): Plan {
     days: row.duration_days ?? 0,
     priceUSD: Math.round((row.price_final ?? 0) * 100) / 100,
     features: buildPlanFeatures(destination.name, row.operators),
+    isPopular: !!row.is_recommended,
   };
 }
 
@@ -101,7 +103,10 @@ export function buildCatalog(destinationRows: DestinationRow[], planRows: Catalo
     const mapped = planRowsForDest
       .map((row) => mapPlan(row, dest))
       .sort((a, b) => a.priceUSD - b.priceUSD);
-    plansByDestination[dest.slug] = markPopularPlan(mapped);
+    // Si el admin marcó algún plan como recomendado en este destino, se respeta
+    // esa marca (mapPlan ya puso isPopular). Si no, fallback al auto (mediana).
+    const hasManual = planRowsForDest.some((r) => r.is_recommended);
+    plansByDestination[dest.slug] = hasManual ? mapped : markPopularPlan(mapped);
   }
 
   return { destinations, plansByDestination };

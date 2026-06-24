@@ -20,7 +20,7 @@ export async function getCatalog(): Promise<UiCatalog> {
         .order('sort_order'),
       supabase
         .from('plan')
-        .select('id, name, iso_country, duration_days, data_amount, is_fup, operators')
+        .select('id, name, iso_country, duration_days, data_amount, is_fup, operators, is_recommended')
         .eq('status', 'active'),
       supabase.from('catalog_pricing').select('plan_id, price_final'),
     ]);

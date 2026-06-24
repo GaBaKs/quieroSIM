@@ -29,6 +29,7 @@ export interface AdminPlanRow {
   priceFixed: number | null;
   useFixedPrice: boolean;
   priceFinal: number | null;
+  isRecommended: boolean;
 }
 
 export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
@@ -39,7 +40,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
   const { data, error } = await supabase
     .from('plan')
     .select(
-      'id, name, country_region, data_amount, duration_days, status, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
+      'id, name, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
     )
     .order('name', { ascending: true });
 
@@ -62,6 +63,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
       priceFixed: pr?.price_fixed === undefined || pr?.price_fixed === null ? null : Number(pr.price_fixed),
       useFixedPrice: !!pr?.use_fixed_price,
       priceFinal: pr?.price_final === undefined || pr?.price_final === null ? null : Number(pr.price_final),
+      isRecommended: !!p.is_recommended,
     };
   });
   return ok(rows);
@@ -145,4 +147,29 @@ export async function setPlanStatus(input: { planId: string; status: 'active' | 
   // sin esperar la revalidación de 30 min (la seguridad ya la da el checkout).
   revalidatePath('/');
   return ok({ status: parsed.data.status });
+}
+
+const recommendedSchema = z.object({ planId: z.string().uuid(), value: z.boolean() });
+
+/** Marca/desmarca un plan como "recomendado" (badge en la landing). Solo super_admin. */
+export async function setPlanRecommended(input: { planId: string; value: boolean }): Promise<Result<{ value: boolean }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(recommendedSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('plan').update({ is_recommended: parsed.data.value }).eq('id', parsed.data.planId);
+  if (error) {
+    logger.error('setPlanRecommended falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar el plan recomendado.');
+  }
+
+  await supabase.rpc('log_admin_action', {
+    p_action: 'plan_recommended_update',
+    p_payload: { plan_id: parsed.data.planId, value: parsed.data.value },
+  });
+
+  revalidatePath('/');
+  return ok({ value: parsed.data.value });
 }
