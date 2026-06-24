@@ -17,15 +17,35 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
   const [onlyRec, setOnlyRec] = useState(false);
   const [onlyFixed, setOnlyFixed] = useState(false);
 
+  // Nombre del país en español por ISO (el catálogo de YeSim viene en inglés),
+  // para poder buscar "estados unidos" y que matchee "United States".
+  const esNameByIso = useMemo(() => {
+    const dn = new Intl.DisplayNames(['es'], { type: 'region' });
+    const m: Record<string, string> = {};
+    for (const p of plans) {
+      const iso = p.isoCountry;
+      if (iso && !iso.includes(',') && iso.length === 2 && !m[iso]) {
+        try { m[iso] = (dn.of(iso) ?? '').toLowerCase(); } catch { /* iso desconocido */ }
+      }
+    }
+    return m;
+  }, [plans]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return plans.filter((p) => {
       if (onlyRec && !p.isRecommended) return false;
       if (onlyFixed && !p.useFixedPrice) return false;
       if (!q) return true;
-      return p.name.toLowerCase().includes(q) || (p.countryRegion ?? '').toLowerCase().includes(q);
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.countryRegion ?? '').toLowerCase().includes(q) ||
+        (p.isoCountry ?? '').toLowerCase().includes(q) ||
+        (p.isoCountry && esNameByIso[p.isoCountry]?.includes(q)) ||
+        false
+      );
     });
-  }, [plans, query, onlyRec, onlyFixed]);
+  }, [plans, query, onlyRec, onlyFixed, esNameByIso]);
   const CAP = 200;
   const shown = filtered.slice(0, CAP);
 

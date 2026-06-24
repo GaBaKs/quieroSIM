@@ -20,6 +20,7 @@ import { requireAdmin, requireSuperAdmin } from '../lib/admin-guard';
 export interface AdminPlanRow {
   id: string;
   name: string;
+  isoCountry: string | null;
   countryRegion: string | null;
   dataAmount: string | null;
   durationDays: number | null;
@@ -40,7 +41,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
   const { data, error } = await supabase
     .from('plan')
     .select(
-      'id, name, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
+      'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
     )
     .order('name', { ascending: true });
 
@@ -54,6 +55,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
     return {
       id: p.id,
       name: p.name,
+      isoCountry: p.iso_country,
       countryRegion: p.country_region,
       dataAmount: p.data_amount,
       durationDays: p.duration_days,
