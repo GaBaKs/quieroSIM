@@ -13,6 +13,7 @@ import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-
 import { QRCodeSVG } from 'qrcode.react';
 import { createCheckout, getOrderStatus, previewCoupon, type CheckoutSession, type OrderStatusInfo } from '@/server/actions/checkout';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { checkoutLock } from '@/lib/checkout-lock';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -67,6 +68,13 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     return () => {
       active = false;
     };
+  }, [isOpen]);
+
+  // Mientras el checkout esté abierto, frenamos el refresh por Realtime de la
+  // landing para no cambiarle el precio/plan al cliente en medio de la compra.
+  useEffect(() => {
+    checkoutLock.set(isOpen);
+    return () => checkoutLock.set(false);
   }, [isOpen]);
 
   useEffect(() => {
