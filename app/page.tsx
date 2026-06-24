@@ -9,6 +9,7 @@ import AboutUs from '@/components/sections/AboutUs';
 import Testimonials from '@/components/sections/Testimonials';
 import FAQ from '@/components/sections/FAQ';
 import { getCatalog, getSupportedDevices } from '@/server/services/catalog';
+import CatalogRealtime from '@/components/CatalogRealtime';
 
 // ISR: el catálogo se revalida cada 30 min (el cron de sync corre a diario).
 export const revalidate = 1800;
@@ -18,6 +19,8 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-white text-slate-850 antialiased flex flex-col justify-between" id="landing-page-root">
+      {/* Realtime: refresca el catálogo cuando el admin cambia precios/planes */}
+      <CatalogRealtime />
       {/* Header Navigation */}
       <Navbar />
 
