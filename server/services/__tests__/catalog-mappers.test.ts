@@ -4,11 +4,9 @@ import {
   buildPlanFeatures,
   formatDataGB,
   groupDevices,
-  markPopularPlan,
   type CatalogPlanRow,
   type DestinationRow,
 } from '../catalog-mappers';
-import type { Plan } from '@/lib/types';
 
 const destUS: DestinationRow = {
   slug: 'eeuu',
@@ -73,24 +71,27 @@ describe('buildPlanFeatures', () => {
   });
 });
 
-describe('markPopularPlan', () => {
-  it('marca el plan de precio mediano', () => {
-    const plans = [
-      { id: 'a', priceUSD: 5 },
-      { id: 'b', priceUSD: 13 },
-      { id: 'c', priceUSD: 22 },
-    ] as Plan[];
-    const marked = markPopularPlan(plans);
-    expect(marked.find((p) => p.id === 'b')?.isPopular).toBe(true);
-    expect(marked.filter((p) => p.isPopular)).toHaveLength(1);
-  });
-  it('con un solo plan no marca nada', () => {
-    const plans = [{ id: 'a', priceUSD: 5 }] as Plan[];
-    expect(markPopularPlan(plans)[0].isPopular).toBeUndefined();
-  });
-});
-
 describe('buildCatalog', () => {
+  it('marca isPopular SOLO en el plan recomendado por el admin (sin fallback)', () => {
+    const { plansByDestination } = buildCatalog(
+      [destUS],
+      [
+        planRow({ id: 'a', price_final: 5 }),
+        planRow({ id: 'b', price_final: 13, is_recommended: true }),
+        planRow({ id: 'c', price_final: 22 }),
+      ],
+    );
+    expect(plansByDestination['eeuu'].filter((p) => p.isPopular).map((p) => p.id)).toEqual(['b']);
+  });
+
+  it('sin ningún plan recomendado, ninguno queda destacado (sin fallback a la mediana)', () => {
+    const { plansByDestination } = buildCatalog(
+      [destUS],
+      [planRow({ id: 'a', price_final: 5 }), planRow({ id: 'b', price_final: 13 })],
+    );
+    expect(plansByDestination['eeuu'].some((p) => p.isPopular)).toBe(false);
+  });
+
   it('solo incluye destinos con planes activos con precio', () => {
     const { destinations, plansByDestination } = buildCatalog(
       [destUS, destSinPlanes],

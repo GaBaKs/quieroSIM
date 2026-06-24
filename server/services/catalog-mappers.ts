@@ -56,14 +56,6 @@ function mapPlan(row: CatalogPlanRow, destination: DestinationRow): Plan {
   };
 }
 
-/** El plan de precio mediano del destino lleva el badge "más popular". */
-export function markPopularPlan(plans: Plan[]): Plan[] {
-  if (plans.length < 2) return plans;
-  const sorted = [...plans].sort((a, b) => a.priceUSD - b.priceUSD);
-  const median = sorted[Math.floor(sorted.length / 2)];
-  return plans.map((p) => (p.id === median.id ? { ...p, isPopular: true } : p));
-}
-
 export interface UiCatalog {
   destinations: Destination[];
   plansByDestination: Record<string, Plan[]>;
@@ -100,13 +92,12 @@ export function buildCatalog(destinationRows: DestinationRow[], planRows: Catalo
       searchAliases: Array.isArray(dest.search_aliases) ? (dest.search_aliases as string[]) : [],
     });
 
-    const mapped = planRowsForDest
+    // El badge "más popular" SOLO aparece en planes marcados como recomendados
+    // por el admin (mapPlan los setea desde is_recommended). Sin marca → sin badge,
+    // no hay fallback automático.
+    plansByDestination[dest.slug] = planRowsForDest
       .map((row) => mapPlan(row, dest))
       .sort((a, b) => a.priceUSD - b.priceUSD);
-    // Si el admin marcó algún plan como recomendado en este destino, se respeta
-    // esa marca (mapPlan ya puso isPopular). Si no, fallback al auto (mediana).
-    const hasManual = planRowsForDest.some((r) => r.is_recommended);
-    plansByDestination[dest.slug] = hasManual ? mapped : markPopularPlan(mapped);
   }
 
   return { destinations, plansByDestination };
