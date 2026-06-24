@@ -40,6 +40,20 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
     return p.name;
   };
 
+  // País para el subtítulo. Los packs regionales traen la lista completa de
+  // países (muy larga, rompe la fila) → mostramos "N países" en su lugar.
+  const countryLabel = (p: AdminPlanRow) => {
+    if (p.isoCountry && esNameByIso[p.isoCountry]) return esNameByIso[p.isoCountry];
+    if (p.countryRegion && p.countryRegion.includes(',')) return `${p.countryRegion.split(',').length} países`;
+    return p.countryRegion || '—';
+  };
+
+  // GB, o "Ilimitado" cuando el data no es numérico (planes unlim).
+  const dataLabel = (p: AdminPlanRow) => {
+    const n = Number(p.dataAmount);
+    return p.dataAmount && !Number.isNaN(n) ? `${n} GB` : 'Ilimitado';
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return plans.filter((p) => {
@@ -121,7 +135,7 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                       {p.isRecommended && <Star className="h-3.5 w-3.5 fill-[#9933c1] text-[#9933c1] shrink-0" />}
                       {displayName(p)}
                     </div>
-                    <div className="text-xs text-zinc-400">{(p.isoCountry && esNameByIso[p.isoCountry]) || p.countryRegion || '—'} · {p.dataAmount ?? '—'} · {p.durationDays ?? '—'}d</div>
+                    <div className="text-xs text-zinc-400 truncate max-w-[220px] sm:max-w-[320px]">{countryLabel(p)} · {dataLabel(p)} · {p.durationDays ?? '—'}d</div>
                   </td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">{p.costEur !== null ? `€${p.costEur}` : '—'}</td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">
