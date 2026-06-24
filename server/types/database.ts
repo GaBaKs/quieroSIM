@@ -921,6 +921,8 @@ export type Database = {
           commission_l1_pct: number | null
           commission_l2_pct: number | null
           default_margin_pct: number | null
+          eur_usd_rate: number | null
+          round_psychological: boolean | null
           id: number
           min_withdrawal_usd: number | null
           price_alert_threshold_pct: number | null
@@ -931,6 +933,8 @@ export type Database = {
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
+          eur_usd_rate?: number | null
+          round_psychological?: boolean | null
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
@@ -941,11 +945,34 @@ export type Database = {
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
+          eur_usd_rate?: number | null
+          round_psychological?: boolean | null
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
+        }
+        Relationships: []
+      }
+      pricing_tier: {
+        Row: {
+          id: string
+          max_cost_eur: number | null
+          multiplier: number
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          max_cost_eur?: number | null
+          multiplier: number
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          max_cost_eur?: number | null
+          multiplier?: number
+          sort_order?: number
         }
         Relationships: []
       }

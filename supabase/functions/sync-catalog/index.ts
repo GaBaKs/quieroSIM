@@ -87,7 +87,7 @@ Deno.serve(async (req: Request) => {
           operators: plan.operators,
           currency: plan.currency,
           retail_price_ref: plan.retailPrice,
-          is_fup: plan.name.toLowerCase().includes('unlimited'),
+          is_fup: plan.name.toLowerCase().includes('unlim'), // cubre "unlimited" y "... unlim"
           status: 'active',
           last_sync_at: new Date().toISOString(),
         },

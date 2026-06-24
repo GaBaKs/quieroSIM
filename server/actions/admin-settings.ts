@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 import { err, ok, type Result } from '../types/result';
 import { ErrorCodes } from '../lib/errors';
 import { parseInput } from '../lib/validation';
@@ -90,6 +91,98 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
   }
   await supabase.rpc('log_admin_action', { p_action: 'settings_update', p_payload: {} });
   return ok(s);
+}
+
+// ── Política de precios (markup por tramos + FX + redondeo) ──────────────────
+
+export interface PricingTier {
+  maxCostEur: number | null;
+  multiplier: number;
+}
+export interface PricingPolicy {
+  eurUsdRate: number;
+  roundPsychological: boolean;
+  tiers: PricingTier[];
+}
+
+export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const supabase = await createSupabaseServerClient();
+  const [{ data: s }, { data: tiers }] = await Promise.all([
+    supabase.from('platform_settings').select('eur_usd_rate, round_psychological').eq('id', 1).maybeSingle(),
+    supabase.from('pricing_tier').select('max_cost_eur, multiplier, sort_order').order('sort_order'),
+  ]);
+  return ok({
+    eurUsdRate: Number(s?.eur_usd_rate ?? 1.135),
+    roundPsychological: s?.round_psychological ?? true,
+    tiers: (tiers ?? []).map((t) => ({
+      maxCostEur: t.max_cost_eur === null ? null : Number(t.max_cost_eur),
+      multiplier: Number(t.multiplier),
+    })),
+  });
+}
+
+const policySchema = z.object({
+  eurUsdRate: z.number().min(0.1).max(10),
+  roundPsychological: z.boolean(),
+  tiers: z
+    .array(z.object({ maxCostEur: z.number().min(0).max(100000).nullable(), multiplier: z.number().min(1).max(20) }))
+    .min(1)
+    .max(20),
+});
+
+/** Actualiza la política (FX + redondeo + tramos). Reemplaza los tramos. Solo super_admin. */
+export async function updatePricingPolicy(input: PricingPolicy): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(policySchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+
+  const { error: e1 } = await supabase
+    .from('platform_settings')
+    .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, updated_at: new Date().toISOString() })
+    .eq('id', 1);
+  if (e1) {
+    logger.error('updatePricingPolicy (settings) falló', { error: e1.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos guardar la política.');
+  }
+
+  // Reemplazar los tramos (el orden lo da el índice).
+  const { error: eDel } = await supabase.from('pricing_tier').delete().gte('multiplier', 0);
+  if (eDel) {
+    logger.error('updatePricingPolicy (delete tiers) falló', { error: eDel.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar los tramos.');
+  }
+  const rows = parsed.data.tiers.map((t, i) => ({ max_cost_eur: t.maxCostEur, multiplier: t.multiplier, sort_order: i + 1 }));
+  const { error: eIns } = await supabase.from('pricing_tier').insert(rows);
+  if (eIns) {
+    logger.error('updatePricingPolicy (insert tiers) falló', { error: eIns.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos guardar los tramos.');
+  }
+
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_policy_update', p_payload: {} });
+  return ok(null);
+}
+
+/** Re-dispara el cálculo de precios en TODOS los planes (tras cambiar la política). */
+export async function recalcPrices(): Promise<Result<{ updated: number }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('plan_pricing')
+    .update({ updated_at: new Date().toISOString() })
+    .gte('id', '00000000-0000-0000-0000-000000000000')
+    .select('plan_id');
+  if (error) {
+    logger.error('recalcPrices falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos recalcular los precios.');
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'prices_recalc', p_payload: { count: data?.length ?? 0 } });
+  revalidatePath('/');
+  return ok({ updated: data?.length ?? 0 });
 }
 
 export async function getAdmins(): Promise<Result<AdminAccount[]>> {

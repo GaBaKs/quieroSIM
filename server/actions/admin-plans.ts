@@ -173,3 +173,30 @@ export async function setPlanRecommended(input: { planId: string; value: boolean
   revalidatePath('/');
   return ok({ value: parsed.data.value });
 }
+
+const clearFixedSchema = z.object({ planId: z.string().uuid() });
+
+/** Vuelve el plan al precio AUTOMÁTICO (saca el precio fijo). Solo super_admin. */
+export async function clearFixedPrice(input: { planId: string }): Promise<Result<{ priceFinal: number }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(clearFixedSchema, input);
+  if (!parsed.ok) return parsed;
+
+  const supabase = await createSupabaseServerClient();
+  // El trigger recalcula price_final con la política al apagar use_fixed_price.
+  const { data, error } = await supabase
+    .from('plan_pricing')
+    .update({ use_fixed_price: false })
+    .eq('plan_id', parsed.data.planId)
+    .select('price_final')
+    .single();
+  if (error || !data) {
+    logger.error('clearFixedPrice falló', { error: error?.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos volver al precio automático.');
+  }
+
+  await supabase.rpc('log_admin_action', { p_action: 'plan_price_auto', p_payload: { plan_id: parsed.data.planId } });
+  revalidatePath('/');
+  return ok({ priceFinal: Number(data.price_final) });
+}

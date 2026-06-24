@@ -1,9 +1,9 @@
-import { getSettings, getAdmins } from '@/server/actions/admin-settings';
+import { getSettings, getAdmins, getPricingPolicy } from '@/server/actions/admin-settings';
 import SettingsView from '@/components/admin/SettingsView';
 
 /** Configuración global (solo super_admin). Server component con datos reales. */
 export default async function AdminSettingsPage() {
-  const [settingsRes, adminsRes] = await Promise.all([getSettings(), getAdmins()]);
+  const [settingsRes, adminsRes, policyRes] = await Promise.all([getSettings(), getAdmins(), getPricingPolicy()]);
   const firstErr = !settingsRes.ok ? settingsRes : !adminsRes.ok ? adminsRes : null;
 
   return (
@@ -22,6 +22,7 @@ export default async function AdminSettingsPage() {
             commissionL1Pct: 0, commissionL2Pct: 0, minWithdrawalUsd: 0,
           }}
           admins={adminsRes.ok ? adminsRes.data : []}
+          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, tiers: [] }}
         />
       )}
     </div>

@@ -3,26 +3,29 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Pencil, Star, X } from 'lucide-react';
+import { Loader2, Pencil, RotateCcw, Star, X } from 'lucide-react';
 import { usd } from './format';
-import { updatePlanPricing, setPlanStatus, setPlanRecommended, type AdminPlanRow } from '@/server/actions/admin-plans';
+import { updatePlanPricing, setPlanStatus, setPlanRecommended, clearFixedPrice, type AdminPlanRow } from '@/server/actions/admin-plans';
 
 export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow[]; isSuperAdmin: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState<AdminPlanRow | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [recId, setRecId] = useState<string | null>(null);
+  const [clearId, setClearId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [onlyRec, setOnlyRec] = useState(false);
+  const [onlyFixed, setOnlyFixed] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return plans.filter((p) => {
       if (onlyRec && !p.isRecommended) return false;
+      if (onlyFixed && !p.useFixedPrice) return false;
       if (!q) return true;
       return p.name.toLowerCase().includes(q) || (p.countryRegion ?? '').toLowerCase().includes(q);
     });
-  }, [plans, query, onlyRec]);
+  }, [plans, query, onlyRec, onlyFixed]);
   const CAP = 200;
   const shown = filtered.slice(0, CAP);
 
@@ -41,6 +44,13 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
     router.refresh();
   };
 
+  const clearAuto = async (plan: AdminPlanRow) => {
+    setClearId(plan.id);
+    await clearFixedPrice({ planId: plan.id });
+    setClearId(null);
+    router.refresh();
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -53,6 +63,10 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
         <label className="flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none whitespace-nowrap">
           <input type="checkbox" checked={onlyRec} onChange={(e) => setOnlyRec(e.target.checked)} className="h-4 w-4 rounded accent-[#9933c1]" />
           Solo recomendados
+        </label>
+        <label className="flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none whitespace-nowrap">
+          <input type="checkbox" checked={onlyFixed} onChange={(e) => setOnlyFixed(e.target.checked)} className="h-4 w-4 rounded accent-amber-500" />
+          Solo precios fijos
         </label>
         <span className="text-xs text-zinc-400 whitespace-nowrap">{filtered.length} de {plans.length}</span>
       </div>
@@ -84,7 +98,14 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">
                     {p.useFixedPrice ? <span className="text-zinc-400 italic">fijo</span> : p.marginPct !== null ? `${p.marginPct}%` : '—'}
                   </td>
-                  <td className="py-3 px-4 text-sm font-black text-zinc-900 dark:text-white">{p.priceFinal !== null ? `${usd(p.priceFinal)}` : '—'}</td>
+                  <td className="py-3 px-4 text-sm font-black text-zinc-900 dark:text-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      {p.priceFinal !== null ? usd(p.priceFinal) : '—'}
+                      {p.useFixedPrice && (
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" title="Precio fijo manual (no sigue la política)">Fijo</span>
+                      )}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
                       p.status === 'active'
@@ -111,6 +132,16 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                         >
                           <Pencil className="h-3.5 w-3.5" /> Precio
                         </button>
+                        {p.useFixedPrice && (
+                          <button
+                            onClick={() => clearAuto(p)}
+                            disabled={clearId === p.id}
+                            title="Volver al precio automático (sacar el fijo)"
+                            className="flex items-center gap-1 rounded-lg border border-amber-300 dark:border-amber-400/30 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-400/10 transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {clearId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} Auto
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleStatus(p)}
                           disabled={togglingId === p.id}
