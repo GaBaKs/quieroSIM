@@ -62,10 +62,19 @@ Deno.serve(async (req: Request) => {
   }
   const feed = plansResult.data;
 
-  const { data: existingPricing, error: pricingErr } = await supabase
-    .from('plan_pricing')
-    .select('plan_id, cost_provider_eur, price_final');
-  if (pricingErr) return Response.json({ ok: false, error: pricingErr.message }, { status: 500 });
+  // plan_pricing supera las 1000 filas → paginar (PostgREST corta en 1000); si
+  // no, faltarían filas en el mapa y se intentaría re-insertar pricing existente.
+  const existingPricing: Array<{ plan_id: string; cost_provider_eur: number | null; price_final: number | null }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('plan_pricing')
+      .select('plan_id, cost_provider_eur, price_final')
+      .order('plan_id')
+      .range(from, from + 999);
+    if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
+    existingPricing.push(...((data ?? []) as typeof existingPricing));
+    if (!data || data.length < 1000) break;
+  }
   const pricingByPlanId = new Map(existingPricing.map((p) => [p.plan_id as string, p]));
 
   const stats = { upserted: 0, pricingCreated: 0, costUpdated: 0, priceAlerts: 0, deactivated: 0 };
