@@ -7,7 +7,7 @@ import { Loader2, Pencil, RotateCcw, Star, X } from 'lucide-react';
 import { usd } from './format';
 import { updatePlanPricing, setPlanStatus, setPlanRecommended, clearFixedPrice, type AdminPlanRow } from '@/server/actions/admin-plans';
 
-export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow[]; isSuperAdmin: boolean }) {
+export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsychological }: { plans: AdminPlanRow[]; isSuperAdmin: boolean; eurUsdRate: number; roundPsychological: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState<AdminPlanRow | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
     const q = query.trim().toLowerCase();
     return plans.filter((p) => {
       if (onlyRec && !p.isRecommended) return false;
-      if (onlyFixed && !p.useFixedPrice) return false;
+      if (onlyFixed && !p.useFixedPrice && !p.useCustomMargin) return false;
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -109,7 +109,7 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
         </label>
         <label className="flex items-center gap-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none whitespace-nowrap">
           <input type="checkbox" checked={onlyFixed} onChange={(e) => setOnlyFixed(e.target.checked)} className="h-4 w-4 rounded accent-amber-500" />
-          Solo precios fijos
+          Solo modificados
         </label>
         <span className="text-xs text-zinc-400 whitespace-nowrap">{filtered.length} de {plans.length}</span>
       </div>
@@ -144,9 +144,11 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                   <td className="py-3 px-4 text-sm font-black text-zinc-900 dark:text-white">
                     <span className="inline-flex items-center gap-1.5">
                       {p.priceFinal !== null ? usd(p.priceFinal) : '—'}
-                      {p.useFixedPrice && (
+                      {p.useFixedPrice ? (
                         <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" title="Precio fijo manual (no sigue la política)">Fijo</span>
-                      )}
+                      ) : p.useCustomMargin ? (
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300" title="Margen personalizado (no sigue la política de tramos)">Margen</span>
+                      ) : null}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -175,11 +177,11 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                         >
                           <Pencil className="h-3.5 w-3.5" /> Precio
                         </button>
-                        {p.useFixedPrice && (
+                        {(p.useFixedPrice || p.useCustomMargin) && (
                           <button
                             onClick={() => clearAuto(p)}
                             disabled={clearId === p.id}
-                            title="Volver al precio automático (sacar el fijo)"
+                            title="Volver al precio automático (política de tramos)"
                             className="flex items-center gap-1 rounded-lg border border-amber-300 dark:border-amber-400/30 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-400/10 transition disabled:opacity-50 cursor-pointer"
                           >
                             {clearId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />} Auto
@@ -206,32 +208,45 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
         <p className="text-xs text-zinc-400">Mostrando los primeros {CAP} de {filtered.length}. Refiná la búsqueda para ver más.</p>
       )}
 
-      {editing && <PriceEditor plan={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
+      {editing && <PriceEditor plan={editing} eurUsdRate={eurUsdRate} roundPsychological={roundPsychological} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
     </>
   );
 }
 
-function PriceEditor({ plan, onClose, onSaved }: { plan: AdminPlanRow; onClose: () => void; onSaved: () => void }) {
-  const [useFixed, setUseFixed] = useState(plan.useFixedPrice);
+const editorInput =
+  'w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]';
+
+function PriceEditor({ plan, eurUsdRate, roundPsychological, onClose, onSaved }: {
+  plan: AdminPlanRow;
+  eurUsdRate: number;
+  roundPsychological: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const initialMode: 'auto' | 'margin' | 'fixed' = plan.useFixedPrice ? 'fixed' : plan.useCustomMargin ? 'margin' : 'auto';
+  const [mode, setMode] = useState<'auto' | 'margin' | 'fixed'>(initialMode);
   const [margin, setMargin] = useState(String(plan.marginPct ?? 100));
   const [fixed, setFixed] = useState(String(plan.priceFixed ?? plan.priceFinal ?? ''));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const preview = useFixed
-    ? Number(fixed) || 0
-    : plan.costEur !== null
-      ? plan.costEur * (1 + (Number(margin) || 0) / 100)
-      : 0;
+  const round = (x: number) =>
+    roundPsychological ? Math.floor(x) + (x - Math.floor(x) <= 0.49 ? 0.49 : 0.99) : Math.round(x * 100) / 100;
+  const preview =
+    mode === 'fixed'
+      ? Number(fixed) || 0
+      : mode === 'margin' && plan.costEur !== null
+        ? round(plan.costEur * (1 + (Number(margin) || 0) / 100) * eurUsdRate)
+        : plan.priceFinal ?? 0; // auto: el actual (se recalcula con la política al guardar)
 
   const save = async () => {
     setBusy(true);
     setError(null);
     const r = await updatePlanPricing({
       planId: plan.id,
-      useFixedPrice: useFixed,
-      marginPct: useFixed ? undefined : Number(margin),
-      priceFixed: useFixed ? Number(fixed) : undefined,
+      mode,
+      marginPct: mode === 'margin' ? Number(margin) : undefined,
+      priceFixed: mode === 'fixed' ? Number(fixed) : undefined,
     });
     setBusy(false);
     if (r.ok) onSaved();
@@ -255,22 +270,39 @@ function PriceEditor({ plan, onClose, onSaved }: { plan: AdminPlanRow; onClose: 
           <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? `€${plan.costEur}` : '—'}</p>
 
           <div className="mt-5 space-y-4">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={useFixed} onChange={(e) => setUseFixed(e.target.checked)} className="h-4 w-4 rounded accent-[#9933c1]" />
-              <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Usar precio fijo (ignora el margen)</span>
-            </label>
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 mb-1.5">Cómo se calcula el precio</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([['auto', 'Automático'], ['margin', 'Margen %'], ['fixed', 'Precio fijo']] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setMode(v)}
+                    className={`rounded-xl border px-2 py-2 text-xs font-bold transition cursor-pointer ${
+                      mode === v
+                        ? 'border-[#9933c1] bg-[#9933c1]/10 text-[#9933c1] dark:text-[#b3ff6b]'
+                        : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-[#9933c1]/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {useFixed ? (
+            {mode === 'auto' && (
+              <p className="text-xs text-zinc-400">Usa la política de tramos (Configuración → Política de precios). El precio se recalcula al guardar.</p>
+            )}
+            {mode === 'margin' && (
+              <div>
+                <label className="block text-xs font-bold text-zinc-500 mb-1.5">Margen (%) — solo para este plan</label>
+                <input type="number" min="0" step="1" value={margin} onChange={(e) => setMargin(e.target.value)} className={editorInput} />
+              </div>
+            )}
+            {mode === 'fixed' && (
               <div>
                 <label className="block text-xs font-bold text-zinc-500 mb-1.5">Precio fijo (USD)</label>
-                <input type="number" min="0" step="0.01" value={fixed} onChange={(e) => setFixed(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]" />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold text-zinc-500 mb-1.5">Margen (%)</label>
-                <input type="number" min="0" step="1" value={margin} onChange={(e) => setMargin(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]" />
+                <input type="number" min="0" step="0.01" value={fixed} onChange={(e) => setFixed(e.target.value)} className={editorInput} />
               </div>
             )}
 

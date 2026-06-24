@@ -29,6 +29,7 @@ export interface AdminPlanRow {
   marginPct: number | null;
   priceFixed: number | null;
   useFixedPrice: boolean;
+  useCustomMargin: boolean;
   priceFinal: number | null;
   isRecommended: boolean;
 }
@@ -44,7 +45,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
     supabase
       .from('plan')
       .select(
-        'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
+        'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, use_custom_margin, price_final)',
       )
       .order('name', { ascending: true })
       .order('id')
@@ -79,6 +80,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
       marginPct: pr?.margin_pct === undefined ? null : Number(pr.margin_pct),
       priceFixed: pr?.price_fixed === undefined || pr?.price_fixed === null ? null : Number(pr.price_fixed),
       useFixedPrice: !!pr?.use_fixed_price,
+      useCustomMargin: !!pr?.use_custom_margin,
       priceFinal: pr?.price_final === undefined || pr?.price_final === null ? null : Number(pr.price_final),
       isRecommended: !!p.is_recommended,
     };
@@ -89,30 +91,37 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
 const pricingSchema = z
   .object({
     planId: z.string().uuid(),
+    // auto = política de tramos · margin = margen propio · fixed = precio fijo USD.
+    mode: z.enum(['auto', 'margin', 'fixed']),
     marginPct: z.number().min(0).max(1000).optional(),
     priceFixed: z.number().min(0).max(100000).nullable().optional(),
-    useFixedPrice: z.boolean(),
   })
-  .refine((d) => !d.useFixedPrice || (d.priceFixed !== undefined && d.priceFixed !== null), {
-    message: 'Con precio fijo activado tenés que indicar el precio.',
+  .refine((d) => d.mode !== 'fixed' || (d.priceFixed !== undefined && d.priceFixed !== null), {
+    message: 'Con precio fijo tenés que indicar el precio.',
+  })
+  .refine((d) => d.mode !== 'margin' || d.marginPct !== undefined, {
+    message: 'Con margen personalizado tenés que indicar el porcentaje.',
   });
 
 export async function updatePlanPricing(input: {
   planId: string;
+  mode: 'auto' | 'margin' | 'fixed';
   marginPct?: number;
   priceFixed?: number | null;
-  useFixedPrice: boolean;
 }): Promise<Result<{ priceFinal: number }>> {
   const guard = await requireSuperAdmin();
   if (!guard.ok) return guard;
   const parsed = parseInput(pricingSchema, input);
   if (!parsed.ok) return parsed;
-  const { planId, marginPct, priceFixed, useFixedPrice } = parsed.data;
+  const { planId, mode, marginPct, priceFixed } = parsed.data;
 
   const supabase = await createSupabaseServerClient();
-  const patch: TablesUpdate<'plan_pricing'> = { use_fixed_price: useFixedPrice };
-  if (marginPct !== undefined) patch.margin_pct = marginPct;
-  if (priceFixed !== undefined) patch.price_fixed = priceFixed;
+  const patch: TablesUpdate<'plan_pricing'> = {
+    use_fixed_price: mode === 'fixed',
+    use_custom_margin: mode === 'margin',
+  };
+  if (mode === 'margin' && marginPct !== undefined) patch.margin_pct = marginPct;
+  if (mode === 'fixed' && priceFixed !== undefined) patch.price_fixed = priceFixed;
 
   // El trigger recalcula price_final; lo leemos de vuelta.
   const { data, error } = await supabase
@@ -129,7 +138,7 @@ export async function updatePlanPricing(input: {
 
   await supabase.rpc('log_admin_action', {
     p_action: 'plan_pricing_update',
-    p_payload: { plan_id: planId, margin_pct: marginPct ?? null, price_fixed: priceFixed ?? null, use_fixed_price: useFixedPrice },
+    p_payload: { plan_id: planId, mode, margin_pct: marginPct ?? null, price_fixed: priceFixed ?? null },
   });
 
   // Regenerar la landing al instante (el catálogo ISR muestra el precio nuevo).
@@ -201,10 +210,10 @@ export async function clearFixedPrice(input: { planId: string }): Promise<Result
   if (!parsed.ok) return parsed;
 
   const supabase = await createSupabaseServerClient();
-  // El trigger recalcula price_final con la política al apagar use_fixed_price.
+  // El trigger recalcula price_final con la política al apagar ambos overrides.
   const { data, error } = await supabase
     .from('plan_pricing')
-    .update({ use_fixed_price: false })
+    .update({ use_fixed_price: false, use_custom_margin: false })
     .eq('plan_id', parsed.data.planId)
     .select('price_final')
     .single();
