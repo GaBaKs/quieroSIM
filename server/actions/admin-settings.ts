@@ -93,76 +93,295 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
   return ok(s);
 }
 
-// ── Política de precios (markup por tramos + FX + redondeo) ──────────────────
+// ── Política de precios: grupos de país (competencia + piso + rangos) ─────────
+// Precio auto = MAX(competencia×(1−desc%), costo×(1+piso%)); si uno está vacío,
+// el otro; si faltan ambos, rango de margen por costo; si no, fallback. La
+// resolución vive en el trigger calculate_plan_pricing; acá solo se edita la config.
 
-export interface PricingTier {
+export interface GroupCompetitorRow {
+  id: string;
+  isUnlimited: boolean;
+  dataAmount: string;
+  durationDays: number;
+  competitorUsd: number | null;
+  label: string;
+}
+export interface GroupMarginRange {
+  id: string;
+  minCostEur: number;
   maxCostEur: number | null;
-  multiplier: number;
+  marginPct: number;
+}
+export interface PricingGroup {
+  id: string;
+  name: string;
+  slug: string;
+  isDefault: boolean;
+  floorMarkupPct: number | null;
+  competitorDiscountPct: number | null;
+  useCompetitorTable: boolean;
+  featureUnlimited: boolean;
+  members: string[];
+  competitorRows: GroupCompetitorRow[];
+  marginRanges: GroupMarginRange[];
 }
 export interface PricingPolicy {
   eurUsdRate: number;
   roundPsychological: boolean;
-  tiers: PricingTier[];
+  groups: PricingGroup[];
 }
+
+/** Los 11 arquetipos (8 por-GB + 3 ilimitados) que llevan precio de competencia. */
+const ARCHETYPES: Array<{ is_unlimited: boolean; data_amount: string; duration_days: number; label: string; sort_order: number }> = [
+  { is_unlimited: false, data_amount: '0.49', duration_days: 1, label: '0,49 GB / 1 día', sort_order: 1 },
+  { is_unlimited: false, data_amount: '1', duration_days: 7, label: '1 GB / 7 días', sort_order: 2 },
+  { is_unlimited: false, data_amount: '3', duration_days: 7, label: '3 GB / 7 días', sort_order: 3 },
+  { is_unlimited: false, data_amount: '5', duration_days: 15, label: '5 GB / 15 días', sort_order: 4 },
+  { is_unlimited: false, data_amount: '10', duration_days: 30, label: '10 GB / 30 días', sort_order: 5 },
+  { is_unlimited: false, data_amount: '15', duration_days: 30, label: '15 GB / 30 días', sort_order: 6 },
+  { is_unlimited: false, data_amount: '20', duration_days: 30, label: '20 GB / 30 días', sort_order: 7 },
+  { is_unlimited: false, data_amount: '30', duration_days: 30, label: '30 GB / 30 días', sort_order: 8 },
+  { is_unlimited: true, data_amount: 'NaN', duration_days: 7, label: 'Ilimitado 7 días', sort_order: 9 },
+  { is_unlimited: true, data_amount: 'NaN', duration_days: 15, label: 'Ilimitado 15 días', sort_order: 10 },
+  { is_unlimited: true, data_amount: 'NaN', duration_days: 30, label: 'Ilimitado 30 días', sort_order: 11 },
+];
 
 export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   const guard = await requireSuperAdmin();
   if (!guard.ok) return guard;
   const supabase = await createSupabaseServerClient();
-  const [{ data: s }, { data: tiers }] = await Promise.all([
+  const [{ data: s }, { data: groups }, { data: members }, { data: comp }, { data: ranges }] = await Promise.all([
     supabase.from('platform_settings').select('eur_usd_rate, round_psychological').eq('id', 1).maybeSingle(),
-    supabase.from('pricing_tier').select('max_cost_eur, multiplier, sort_order').order('sort_order'),
+    supabase.from('country_group').select('*').order('sort_order'),
+    supabase.from('country_group_member').select('iso_country, group_id'),
+    supabase.from('group_competitor_price').select('*').order('sort_order'),
+    supabase.from('group_margin_range').select('*').order('sort_order'),
   ]);
+
+  const membersBy = new Map<string, string[]>();
+  (members ?? []).forEach((m) => {
+    const arr = membersBy.get(m.group_id) ?? [];
+    arr.push(m.iso_country);
+    membersBy.set(m.group_id, arr);
+  });
+  const compBy = new Map<string, GroupCompetitorRow[]>();
+  (comp ?? []).forEach((c) => {
+    const arr = compBy.get(c.group_id) ?? [];
+    arr.push({
+      id: c.id, isUnlimited: c.is_unlimited, dataAmount: c.data_amount, durationDays: c.duration_days,
+      competitorUsd: c.competitor_usd === null ? null : Number(c.competitor_usd), label: c.label ?? '',
+    });
+    compBy.set(c.group_id, arr);
+  });
+  const rangesBy = new Map<string, GroupMarginRange[]>();
+  (ranges ?? []).forEach((r) => {
+    const arr = rangesBy.get(r.group_id) ?? [];
+    arr.push({ id: r.id, minCostEur: Number(r.min_cost_eur), maxCostEur: r.max_cost_eur === null ? null : Number(r.max_cost_eur), marginPct: Number(r.margin_pct) });
+    rangesBy.set(r.group_id, arr);
+  });
+
   return ok({
     eurUsdRate: Number(s?.eur_usd_rate ?? 1.135),
     roundPsychological: s?.round_psychological ?? true,
-    tiers: (tiers ?? []).map((t) => ({
-      maxCostEur: t.max_cost_eur === null ? null : Number(t.max_cost_eur),
-      multiplier: Number(t.multiplier),
+    groups: (groups ?? []).map((g) => ({
+      id: g.id, name: g.name, slug: g.slug, isDefault: g.is_default,
+      floorMarkupPct: g.floor_markup_pct === null ? null : Number(g.floor_markup_pct),
+      competitorDiscountPct: g.competitor_discount_pct === null ? null : Number(g.competitor_discount_pct),
+      useCompetitorTable: g.use_competitor_table, featureUnlimited: g.feature_unlimited,
+      members: (membersBy.get(g.id) ?? []).sort(),
+      competitorRows: compBy.get(g.id) ?? [],
+      marginRanges: rangesBy.get(g.id) ?? [],
     })),
   });
 }
 
-const policySchema = z.object({
-  eurUsdRate: z.number().min(0.1).max(10),
-  roundPsychological: z.boolean(),
-  tiers: z
-    .array(z.object({ maxCostEur: z.number().min(0).max(100000).nullable(), multiplier: z.number().min(1).max(20) }))
-    .min(1)
-    .max(20),
-});
+const globalsSchema = z.object({ eurUsdRate: z.number().min(0.1).max(10), roundPsychological: z.boolean() });
 
-/** Actualiza la política (FX + redondeo + tramos). Reemplaza los tramos. Solo super_admin. */
-export async function updatePricingPolicy(input: PricingPolicy): Promise<Result<null>> {
+/** Tipo de cambio EUR→USD + redondeo psicológico. Solo super_admin. */
+export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsychological: boolean }): Promise<Result<null>> {
   const guard = await requireSuperAdmin();
   if (!guard.ok) return guard;
-  const parsed = parseInput(policySchema, input);
+  const parsed = parseInput(globalsSchema, input);
   if (!parsed.ok) return parsed;
   const supabase = await createSupabaseServerClient();
-
-  const { error: e1 } = await supabase
+  const { error } = await supabase
     .from('platform_settings')
     .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, updated_at: new Date().toISOString() })
     .eq('id', 1);
-  if (e1) {
-    logger.error('updatePricingPolicy (settings) falló', { error: e1.message });
-    return err(ErrorCodes.INTERNAL, 'No pudimos guardar la política.');
+  if (error) {
+    logger.error('updatePricingGlobals falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos guardar el tipo de cambio.');
   }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_globals_update', p_payload: {} });
+  return ok(null);
+}
 
-  // Reemplazar los tramos (el orden lo da el índice).
-  const { error: eDel } = await supabase.from('pricing_tier').delete().gte('multiplier', 0);
+const groupSchema = z.object({
+  id: z.string().uuid(),
+  floorMarkupPct: z.number().min(0).max(1000).nullable(),
+  competitorDiscountPct: z.number().min(0).max(100).nullable(),
+  useCompetitorTable: z.boolean(),
+  featureUnlimited: z.boolean(),
+});
+
+/** Guarda piso/descuento/flags de un grupo. Solo super_admin. */
+export async function saveGroup(input: {
+  id: string; floorMarkupPct: number | null; competitorDiscountPct: number | null; useCompetitorTable: boolean; featureUnlimited: boolean;
+}): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(groupSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('country_group')
+    .update({
+      floor_markup_pct: parsed.data.floorMarkupPct,
+      competitor_discount_pct: parsed.data.competitorDiscountPct,
+      use_competitor_table: parsed.data.useCompetitorTable,
+      feature_unlimited: parsed.data.featureUnlimited,
+    })
+    .eq('id', parsed.data.id);
+  if (error) {
+    logger.error('saveGroup falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos guardar el grupo.');
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_group_update', p_payload: { group_id: parsed.data.id } });
+  return ok(null);
+}
+
+const createGroupSchema = z.object({ name: z.string().trim().min(2).max(60) });
+
+/** Crea un grupo nuevo (con los 11 arquetipos vacíos para cargar). Solo super_admin. */
+export async function createGroup(input: { name: string }): Promise<Result<{ id: string }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(createGroupSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const slug =
+    parsed.data.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'grupo';
+  const { data: grp, error } = await supabase
+    .from('country_group')
+    .insert({ name: parsed.data.name, slug, is_default: false, floor_markup_pct: 40, competitor_discount_pct: 10, use_competitor_table: true, feature_unlimited: true, sort_order: 99 })
+    .select('id')
+    .single();
+  if (error || !grp) {
+    logger.error('createGroup falló', { error: error?.message });
+    return err(ErrorCodes.VALIDATION, 'No pudimos crear el grupo (¿nombre repetido?).');
+  }
+  await supabase.from('group_competitor_price').insert(ARCHETYPES.map((a) => ({ ...a, group_id: grp.id, competitor_usd: null })));
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_group_create', p_payload: { group_id: grp.id } });
+  return ok({ id: grp.id });
+}
+
+const idSchema = z.object({ id: z.string().uuid() });
+
+/** Borra un grupo (no el default). Sus miembros vuelven al default. Solo super_admin. */
+export async function deleteGroup(input: { id: string }): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(idSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data: g } = await supabase.from('country_group').select('is_default').eq('id', parsed.data.id).maybeSingle();
+  if (g?.is_default) return err(ErrorCodes.VALIDATION, 'No se puede borrar el grupo default.');
+  const { error } = await supabase.from('country_group').delete().eq('id', parsed.data.id);
+  if (error) {
+    logger.error('deleteGroup falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos borrar el grupo.');
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_group_delete', p_payload: { group_id: parsed.data.id } });
+  return ok(null);
+}
+
+const compRowsSchema = z.object({
+  groupId: z.string().uuid(),
+  rows: z.array(z.object({ id: z.string().uuid(), competitorUsd: z.number().min(0).max(100000).nullable() })).max(50),
+});
+
+/** Guarda los precios de competencia de un grupo. Solo super_admin. */
+export async function saveGroupCompetitorRows(input: { groupId: string; rows: Array<{ id: string; competitorUsd: number | null }> }): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(compRowsSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  for (const r of parsed.data.rows) {
+    const { error } = await supabase.from('group_competitor_price').update({ competitor_usd: r.competitorUsd }).eq('id', r.id).eq('group_id', parsed.data.groupId);
+    if (error) {
+      logger.error('saveGroupCompetitorRows falló', { error: error.message });
+      return err(ErrorCodes.INTERNAL, 'No pudimos guardar los precios de competencia.');
+    }
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_competitor_update', p_payload: { group_id: parsed.data.groupId } });
+  return ok(null);
+}
+
+const rangesSchema = z.object({
+  groupId: z.string().uuid(),
+  ranges: z.array(z.object({ minCostEur: z.number().min(0).max(100000), maxCostEur: z.number().min(0).max(100000).nullable(), marginPct: z.number().min(0).max(1000) })).max(30),
+});
+
+/** Reemplaza los rangos de margen por costo de un grupo. Solo super_admin. */
+export async function saveGroupMarginRanges(input: { groupId: string; ranges: Array<{ minCostEur: number; maxCostEur: number | null; marginPct: number }> }): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(rangesSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { error: eDel } = await supabase.from('group_margin_range').delete().eq('group_id', parsed.data.groupId);
   if (eDel) {
-    logger.error('updatePricingPolicy (delete tiers) falló', { error: eDel.message });
-    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar los tramos.');
+    logger.error('saveGroupMarginRanges (delete) falló', { error: eDel.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar los rangos.');
   }
-  const rows = parsed.data.tiers.map((t, i) => ({ max_cost_eur: t.maxCostEur, multiplier: t.multiplier, sort_order: i + 1 }));
-  const { error: eIns } = await supabase.from('pricing_tier').insert(rows);
-  if (eIns) {
-    logger.error('updatePricingPolicy (insert tiers) falló', { error: eIns.message });
-    return err(ErrorCodes.INTERNAL, 'No pudimos guardar los tramos.');
+  if (parsed.data.ranges.length) {
+    const rows = parsed.data.ranges.map((r, i) => ({ group_id: parsed.data.groupId, min_cost_eur: r.minCostEur, max_cost_eur: r.maxCostEur, margin_pct: r.marginPct, sort_order: i + 1 }));
+    const { error: eIns } = await supabase.from('group_margin_range').insert(rows);
+    if (eIns) {
+      logger.error('saveGroupMarginRanges (insert) falló', { error: eIns.message });
+      return err(ErrorCodes.INTERNAL, 'No pudimos guardar los rangos.');
+    }
   }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_ranges_update', p_payload: { group_id: parsed.data.groupId } });
+  return ok(null);
+}
 
-  await supabase.rpc('log_admin_action', { p_action: 'pricing_policy_update', p_payload: {} });
+const addCountrySchema = z.object({ groupId: z.string().uuid(), iso: z.string().trim().length(2) });
+
+/** Asigna un país (ISO2) a un grupo (lo saca de cualquier otro). Solo super_admin. */
+export async function addCountryToGroup(input: { groupId: string; iso: string }): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(addCountrySchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from('country_group_member')
+    .upsert({ iso_country: parsed.data.iso.toUpperCase(), group_id: parsed.data.groupId }, { onConflict: 'iso_country' });
+  if (error) {
+    logger.error('addCountryToGroup falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos asignar el país.');
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_country_assign', p_payload: { group_id: parsed.data.groupId, iso: parsed.data.iso.toUpperCase() } });
+  return ok(null);
+}
+
+const removeCountrySchema = z.object({ iso: z.string().trim().length(2) });
+
+/** Quita un país de su grupo (vuelve al default). Solo super_admin. */
+export async function removeCountryFromGroup(input: { iso: string }): Promise<Result<null>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(removeCountrySchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from('country_group_member').delete().eq('iso_country', parsed.data.iso.toUpperCase());
+  if (error) {
+    logger.error('removeCountryFromGroup falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos quitar el país.');
+  }
+  await supabase.rpc('log_admin_action', { p_action: 'pricing_country_unassign', p_payload: { iso: parsed.data.iso.toUpperCase() } });
   return ok(null);
 }
 

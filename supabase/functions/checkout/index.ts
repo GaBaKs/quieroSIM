@@ -45,8 +45,8 @@ Deno.serve(async (req: Request) => {
       return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento y probá de nuevo.', 429);
     }
 
-    const { planId, email, fullName, phone, acceptTerms, lang, couponCode } = body as {
-      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string;
+    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd } = body as {
+      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number;
     };
     // Idioma del comprador: define el idioma del email con el QR (Etapa 6).
     const orderLang = lang && ['ES', 'EN', 'PT'].includes(lang) ? lang : 'ES';
@@ -77,6 +77,16 @@ Deno.serve(async (req: Request) => {
       return fail('PLAN_NOT_AVAILABLE', 'El plan no está disponible.', 404);
     }
     const priceUsd = Number(pricing.price_final);
+
+    // Candado de precio: si el admin cambió el precio mientras el cliente
+    // completaba sus datos, el precio actual de la BD ya no coincide con el que
+    // vio. NO cobramos: avisamos el precio nuevo para que confirme (sin crear
+    // orden ni PaymentIntent). Tolerancia de 1 centavo por redondeos. El monto a
+    // cobrar SIEMPRE sale de la BD; expectedPriceUsd es solo el valor de control
+    // que vio el cliente, nunca el que se cobra.
+    if (typeof expectedPriceUsd === 'number' && Math.abs(expectedPriceUsd - priceUsd) > 0.01) {
+      return json({ ok: true, data: { priceChanged: true, newPriceUsd: priceUsd } });
+    }
 
     // Cupón (Etapa 8A): se valida SIEMPRE en server (la fuente de verdad; el
     // preview del front es solo UX). El descuento se aplica al monto del PI.

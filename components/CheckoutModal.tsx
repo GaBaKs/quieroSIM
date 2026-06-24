@@ -44,6 +44,9 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [session, setSession] = useState<CheckoutSession | null>(null);
+  // Precio nuevo si el admin lo cambió mientras el cliente completaba sus datos
+  // (candado de precio): se muestra un aviso y se exige confirmar para cobrar.
+  const [priceChanged, setPriceChanged] = useState<number | null>(null);
   const [orderInfo, setOrderInfo] = useState<OrderStatusInfo | null>(null);
   const [delayed, setDelayed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -88,6 +91,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
         setErrors({});
         setSubmitting(false);
         setSession(null);
+        setPriceChanged(null);
         setOrderInfo(null);
         setDelayed(false);
         setCopied(false);
@@ -177,10 +181,12 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     setCouponError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // acceptNewPrice=true: el cliente ya vio el aviso de cambio de precio y lo
+  // confirma → no mandamos expectedPriceUsd, así el server cobra el precio actual.
+  const doCheckout = async (acceptNewPrice: boolean) => {
     if (!validate() || submitting) return;
     setSubmitting(true);
+    setErrors({});
     const result = await createCheckout({
       planId: plan.id,
       email,
@@ -189,14 +195,29 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       acceptTerms: true,
       lang, // idioma del email con el QR
       couponCode: applied?.code, // cupón aplicado (se revalida server-side)
+      // Precio que vio el cliente (control anti cambio en el medio). Al reconfirmar
+      // se omite para aceptar el precio actual.
+      expectedPriceUsd: acceptNewPrice ? undefined : plan.priceUSD,
     });
     setSubmitting(false);
     if (!result.ok) {
       setErrors({ general: result.error.message });
       return;
     }
+    if ('priceChanged' in result.data) {
+      // El precio cambió: mostramos el aviso y NO avanzamos al pago. El cliente
+      // confirma con el botón (doCheckout(true)) o cierra.
+      setPriceChanged(result.data.newPriceUsd);
+      return;
+    }
+    setPriceChanged(null);
     setSession(result.data);
     setStep('payment');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    void doCheckout(false);
   };
 
   const copyLpa = async (lpa: string) => {
@@ -440,14 +461,42 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                   </p>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--color-lime)] hover:bg-[var(--color-lime-vivid)] text-[var(--color-black)] font-black py-3 sm:py-4 px-4 shadow-md shadow-lime-600/15 transition-all font-sans text-xs sm:text-base cursor-pointer disabled:opacity-60"
-                >
-                  {submitting ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
-                  {submitting ? t('checkout.preparing') : t('checkout.continueBtn')}
-                </button>
+                {/* Candado de precio: el admin cambió el precio mientras el cliente
+                    completaba sus datos. Hay que confirmar el precio nuevo. */}
+                {priceChanged !== null && (
+                  <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-800">
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold">{t('checkout.priceChangedTitle')}</p>
+                      <p>
+                        {t('checkout.priceChangedBody')
+                          .replace('{old}', plan.priceUSD.toFixed(2))
+                          .replace('{new}', priceChanged.toFixed(2))}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {priceChanged !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => void doCheckout(true)}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--color-lime)] hover:bg-[var(--color-lime-vivid)] text-[var(--color-black)] font-black py-3 sm:py-4 px-4 shadow-md shadow-lime-600/15 transition-all font-sans text-xs sm:text-base cursor-pointer disabled:opacity-60"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    {submitting ? t('checkout.preparing') : t('checkout.priceChangedBtn').replace('{new}', priceChanged.toFixed(2))}
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--color-lime)] hover:bg-[var(--color-lime-vivid)] text-[var(--color-black)] font-black py-3 sm:py-4 px-4 shadow-md shadow-lime-600/15 transition-all font-sans text-xs sm:text-base cursor-pointer disabled:opacity-60"
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    {submitting ? t('checkout.preparing') : t('checkout.continueBtn')}
+                  </button>
+                )}
 
                 {/* Footer security logos */}
                 <div className="flex items-center justify-center gap-3 text-[9px] sm:text-[10px] text-slate-400 font-sans pt-1 flex-wrap">

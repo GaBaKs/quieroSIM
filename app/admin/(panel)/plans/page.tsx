@@ -7,7 +7,7 @@ import PlansView from '@/components/admin/PlansView';
 export default async function AdminPlansPage() {
   const [result, ctx, policyRes] = await Promise.all([getPlansAdmin(), getAuthContext(), getPricingPolicy()]);
   const isSuperAdmin = ctx?.adminSubRole === 'super_admin';
-  const policy = policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, tiers: [] };
+  const policy = policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, groups: [] };
 
   return (
     <div className="space-y-6">

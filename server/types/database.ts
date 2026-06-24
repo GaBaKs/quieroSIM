@@ -267,6 +267,144 @@ export type Database = {
           },
         ]
       }
+      country_group: {
+        Row: {
+          competitor_discount_pct: number | null
+          created_at: string
+          feature_unlimited: boolean
+          floor_markup_pct: number | null
+          id: string
+          is_default: boolean
+          name: string
+          slug: string
+          sort_order: number
+          use_competitor_table: boolean
+        }
+        Insert: {
+          competitor_discount_pct?: number | null
+          created_at?: string
+          feature_unlimited?: boolean
+          floor_markup_pct?: number | null
+          id?: string
+          is_default?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          use_competitor_table?: boolean
+        }
+        Update: {
+          competitor_discount_pct?: number | null
+          created_at?: string
+          feature_unlimited?: boolean
+          floor_markup_pct?: number | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          use_competitor_table?: boolean
+        }
+        Relationships: []
+      }
+      country_group_member: {
+        Row: {
+          group_id: string
+          iso_country: string
+        }
+        Insert: {
+          group_id: string
+          iso_country: string
+        }
+        Update: {
+          group_id?: string
+          iso_country?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "country_group_member_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "country_group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_competitor_price: {
+        Row: {
+          competitor_usd: number | null
+          data_amount: string
+          duration_days: number
+          group_id: string
+          id: string
+          is_unlimited: boolean
+          label: string | null
+          sort_order: number
+        }
+        Insert: {
+          competitor_usd?: number | null
+          data_amount: string
+          duration_days: number
+          group_id: string
+          id?: string
+          is_unlimited?: boolean
+          label?: string | null
+          sort_order?: number
+        }
+        Update: {
+          competitor_usd?: number | null
+          data_amount?: string
+          duration_days?: number
+          group_id?: string
+          id?: string
+          is_unlimited?: boolean
+          label?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_competitor_price_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "country_group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_margin_range: {
+        Row: {
+          group_id: string
+          id: string
+          margin_pct: number
+          max_cost_eur: number | null
+          min_cost_eur: number
+          sort_order: number
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          margin_pct: number
+          max_cost_eur?: number | null
+          min_cost_eur?: number
+          sort_order?: number
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          margin_pct?: number
+          max_cost_eur?: number | null
+          min_cost_eur?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_margin_range_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "country_group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon: {
         Row: {
           affiliate_profile_id: string | null

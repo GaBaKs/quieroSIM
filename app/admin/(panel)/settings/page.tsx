@@ -22,7 +22,7 @@ export default async function AdminSettingsPage() {
             commissionL1Pct: 0, commissionL2Pct: 0, minWithdrawalUsd: 0,
           }}
           admins={adminsRes.ok ? adminsRes.data : []}
-          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, tiers: [] }}
+          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, groups: [] }}
         />
       )}
     </div>

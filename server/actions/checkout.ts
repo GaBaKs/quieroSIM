@@ -23,6 +23,13 @@ const createCheckoutSchema = z.object({
   lang: z.enum(['ES', 'EN', 'PT']).default('ES'),
   /** Código de cupón opcional (se valida de nuevo server-side). */
   couponCode: z.string().trim().max(40).optional(),
+  /**
+   * Precio (base, en USD) que el cliente vio al abrir el checkout. El server lo
+   * compara con el precio actual de la BD; si difiere (el admin lo cambió en el
+   * medio), no cobra y pide confirmar el precio nuevo. Es solo control, nunca el
+   * monto a cobrar. Se omite al reconfirmar el precio nuevo.
+   */
+  expectedPriceUsd: z.number().positive().optional(),
 });
 export type CreateCheckoutInput = z.input<typeof createCheckoutSchema>;
 
@@ -32,6 +39,14 @@ export interface CheckoutSession {
   amountUsd: number;
   discountUsd?: number;
 }
+
+/** El precio cambió entre que el cliente abrió el checkout y apretó "Continuar". */
+export interface PriceChanged {
+  priceChanged: true;
+  newPriceUsd: number;
+}
+
+export type CheckoutResult = CheckoutSession | PriceChanged;
 
 const previewCouponSchema = z.object({
   code: z.string().trim().min(1).max(40),
@@ -91,11 +106,15 @@ async function callEdgeFunction<T>(path: string, body: unknown): Promise<Result<
   }
 }
 
-/** Crea la orden + PaymentIntent. El precio se recalcula SIEMPRE en el server. */
-export async function createCheckout(input: CreateCheckoutInput): Promise<Result<CheckoutSession>> {
+/**
+ * Crea la orden + PaymentIntent. El precio se recalcula SIEMPRE en el server.
+ * Si el precio cambió respecto al que vio el cliente (expectedPriceUsd), no cobra
+ * y devuelve { priceChanged, newPriceUsd } para que el front pida confirmación.
+ */
+export async function createCheckout(input: CreateCheckoutInput): Promise<Result<CheckoutResult>> {
   const parsed = parseInput(createCheckoutSchema, input);
   if (!parsed.ok) return parsed;
-  return callEdgeFunction<CheckoutSession>('checkout/create', parsed.data);
+  return callEdgeFunction<CheckoutResult>('checkout/create', parsed.data);
 }
 
 /** Estado de la orden para el polling post-pago (valida orderId+email — apto guests). */

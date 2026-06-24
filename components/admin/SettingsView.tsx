@@ -3,16 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield, DollarSign, RefreshCw } from 'lucide-react';
+import { Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield, DollarSign } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
+import PricingPolicyEditor from '@/components/admin/PricingPolicyEditor';
 import {
   updateSettings,
   grantAdmin,
   setAdminSubRole,
   revokeAdmin,
-  updatePricingPolicy,
-  recalcPrices,
   type PlatformSettings,
   type AdminAccount,
   type PricingPolicy,
@@ -43,42 +42,6 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
   const [error, setError] = useState<string | null>(null);
 
   const set = (k: keyof PlatformSettings, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
-  // ── Política de precios ──
-  const [fx, setFx] = useState(String(policy.eurUsdRate));
-  const [roundPsych, setRoundPsych] = useState(policy.roundPsychological);
-  const [tiers, setTiers] = useState(
-    policy.tiers.map((t) => ({ maxCostEur: t.maxCostEur === null ? '' : String(t.maxCostEur), multiplier: String(t.multiplier) })),
-  );
-  const [polBusy, setPolBusy] = useState(false);
-  const [polMsg, setPolMsg] = useState<string | null>(null);
-  const [recalcBusy, setRecalcBusy] = useState(false);
-  const [recalcMsg, setRecalcMsg] = useState<string | null>(null);
-
-  const setTier = (i: number, k: 'maxCostEur' | 'multiplier', v: string) =>
-    setTiers((arr) => arr.map((t, j) => (j === i ? { ...t, [k]: v } : t)));
-
-  const handleSavePolicy = async () => {
-    setPolBusy(true);
-    setPolMsg(null);
-    const res = await updatePricingPolicy({
-      eurUsdRate: Number(fx),
-      roundPsychological: roundPsych,
-      tiers: tiers.map((t) => ({ maxCostEur: t.maxCostEur.trim() === '' ? null : Number(t.maxCostEur), multiplier: Number(t.multiplier) })),
-    });
-    setPolBusy(false);
-    setPolMsg(res.ok ? 'Guardado ✓ — apretá "Recalcular" para aplicarlo a los planes.' : res.error.message);
-    if (res.ok) router.refresh();
-  };
-
-  const handleRecalc = async () => {
-    setRecalcBusy(true);
-    setRecalcMsg(null);
-    const res = await recalcPrices();
-    setRecalcBusy(false);
-    setRecalcMsg(res.ok ? `Recalculados ${res.data.updated} planes ✓` : res.error.message);
-    if (res.ok) router.refresh();
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -180,42 +143,8 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
 
       {/* Política de precios */}
       {tab === 'pricing' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardCls}>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Precio = <strong>costo€ × tipo de cambio × multiplicador del tramo</strong>, redondeado. Aplica a todos los planes que no tengan un precio fijo manual.
-          </p>
-          <div>
-            <label className={labelCls}>Tipo de cambio EUR → USD</label>
-            <input type="number" step="0.001" value={fx} onChange={(e) => setFx(e.target.value)} className={inputCls} />
-          </div>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input type="checkbox" checked={roundPsych} onChange={(e) => setRoundPsych(e.target.checked)} className="h-4 w-4 rounded accent-[#9933c1]" />
-            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Redondeo psicológico (.49 / .99)</span>
-          </label>
-          <div>
-            <label className={labelCls}>Tramos de markup (según costo mayorista €)</label>
-            <div className="space-y-2">
-              {tiers.map((t, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 w-14 shrink-0">{t.maxCostEur.trim() === '' ? 'Resto' : 'hasta €'}</span>
-                  <input type="number" step="0.01" placeholder="sin tope" value={t.maxCostEur} onChange={(e) => setTier(i, 'maxCostEur', e.target.value)} className={`${inputCls} w-28`} />
-                  <span className="text-sm text-zinc-400">×</span>
-                  <input type="number" step="0.1" value={t.multiplier} onChange={(e) => setTier(i, 'multiplier', e.target.value)} className={`${inputCls} w-24`} />
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-400 mt-1">El último tramo (sin tope) cubre los costos más altos.</p>
-          </div>
-          {polMsg && <p className="text-sm text-zinc-600 dark:text-zinc-300">{polMsg}</p>}
-          <div className="flex flex-wrap items-center gap-3">
-            <QuieroButton variant="primary" className="py-3 px-6 text-sm flex items-center gap-2" onClick={handleSavePolicy}>
-              <Save className="h-4 w-4" /> {polBusy ? 'Guardando…' : 'Guardar política'}
-            </QuieroButton>
-            <button onClick={handleRecalc} disabled={recalcBusy} className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 px-5 py-3 text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:border-[#9933c1]/50 transition disabled:opacity-60 cursor-pointer">
-              <RefreshCw className={`h-4 w-4 ${recalcBusy ? 'animate-spin' : ''}`} /> Recalcular todos los precios
-            </button>
-          </div>
-          {recalcMsg && <p className="text-sm font-bold text-[#9933c1] dark:text-[#b3ff6b]">{recalcMsg}</p>}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <PricingPolicyEditor policy={policy} />
         </motion.div>
       )}
 
