@@ -9,27 +9,52 @@ import { buildCatalog, groupDevices, type UiCatalog } from './catalog-mappers';
  * Ante error devuelven vacío y loguean: la landing nunca se cae por la BD.
  */
 
+/**
+ * Trae TODAS las filas paginando de a 1000: PostgREST/Supabase corta cada
+ * request en 1000 filas (max-rows), y el catálogo tiene >1500 planes. Sin esto
+ * se perdían planes silenciosamente. Requiere un orden estable (por id).
+ */
+async function fetchAllPages<T>(
+  makeQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<{ data: T[]; error: string | null }> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await makeQuery(from, from + PAGE - 1);
+    if (error) return { data: [], error: error.message };
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return { data: all, error: null };
+}
+
 export async function getCatalog(): Promise<UiCatalog> {
   try {
     const supabase = createSupabaseAnonClient();
-    const [destRes, planRes, pricingRes] = await Promise.all([
-      supabase
-        .from('destination')
-        .select('slug, name, code, region, popular, flag, search_aliases, iso_match')
-        .eq('status', 'active')
-        .order('sort_order'),
+    const destRes = await supabase
+      .from('destination')
+      .select('slug, name, code, region, popular, flag, search_aliases, iso_match')
+      .eq('status', 'active')
+      .order('sort_order');
+    // plan (>1500) y catalog_pricing (>1500) superan el límite de 1000 → paginar.
+    const planRes = await fetchAllPages((from, to) =>
       supabase
         .from('plan')
         .select('id, name, iso_country, duration_days, data_amount, is_fup, operators, is_recommended')
-        .eq('status', 'active'),
-      supabase.from('catalog_pricing').select('plan_id, price_final'),
-    ]);
+        .eq('status', 'active')
+        .order('id')
+        .range(from, to),
+    );
+    const pricingRes = await fetchAllPages((from, to) =>
+      supabase.from('catalog_pricing').select('plan_id, price_final').order('plan_id').range(from, to),
+    );
 
     if (destRes.error || planRes.error || pricingRes.error) {
       logger.error('getCatalog: error leyendo catálogo', {
         dest: destRes.error?.message,
-        plan: planRes.error?.message,
-        pricing: pricingRes.error?.message,
+        plan: planRes.error,
+        pricing: pricingRes.error,
       });
       return { destinations: [], plansByDestination: {} };
     }

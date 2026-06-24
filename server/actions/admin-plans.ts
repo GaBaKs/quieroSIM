@@ -38,19 +38,34 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('plan')
-    .select(
-      'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
-    )
-    .order('name', { ascending: true });
+  // El catálogo supera las 1000 filas (límite de PostgREST) → paginar.
+  const PAGE = 1000;
+  const fetchPage = (from: number) =>
+    supabase
+      .from('plan')
+      .select(
+        'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, price_final)',
+      )
+      .order('name', { ascending: true })
+      .order('id')
+      .range(from, from + PAGE - 1);
 
-  if (error) {
-    logger.error('getPlansAdmin falló', { error: error.message });
+  const first = await fetchPage(0);
+  if (first.error) {
+    logger.error('getPlansAdmin falló', { error: first.error.message });
     return err(ErrorCodes.INTERNAL, 'No pudimos cargar los planes.');
   }
+  const data = [...(first.data ?? [])];
+  if ((first.data?.length ?? 0) === PAGE) {
+    for (let from = PAGE; ; from += PAGE) {
+      const next = await fetchPage(from);
+      if (next.error || !next.data?.length) break;
+      data.push(...next.data);
+      if (next.data.length < PAGE) break;
+    }
+  }
 
-  const rows: AdminPlanRow[] = (data ?? []).map((p) => {
+  const rows: AdminPlanRow[] = data.map((p) => {
     const pr = Array.isArray(p.plan_pricing) ? p.plan_pricing[0] : p.plan_pricing;
     return {
       id: p.id,
