@@ -25,11 +25,20 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
     for (const p of plans) {
       const iso = p.isoCountry;
       if (iso && !iso.includes(',') && iso.length === 2 && !m[iso]) {
-        try { m[iso] = (dn.of(iso) ?? '').toLowerCase(); } catch { /* iso desconocido */ }
+        try { m[iso] = dn.of(iso) ?? ''; } catch { /* iso desconocido */ }
       }
     }
     return m;
   }, [plans]);
+
+  // Nombre del plan con el país en español ("United States 5GB" → "Estados Unidos 5GB").
+  const displayName = (p: AdminPlanRow) => {
+    const es = p.isoCountry ? esNameByIso[p.isoCountry] : undefined;
+    if (es && p.countryRegion && p.name.startsWith(p.countryRegion)) {
+      return es + p.name.slice(p.countryRegion.length);
+    }
+    return p.name;
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,7 +50,7 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
         p.name.toLowerCase().includes(q) ||
         (p.countryRegion ?? '').toLowerCase().includes(q) ||
         (p.isoCountry ?? '').toLowerCase().includes(q) ||
-        (p.isoCountry && esNameByIso[p.isoCountry]?.includes(q)) ||
+        (p.isoCountry && esNameByIso[p.isoCountry]?.toLowerCase().includes(q)) ||
         false
       );
     });
@@ -110,9 +119,9 @@ export default function PlansView({ plans, isSuperAdmin }: { plans: AdminPlanRow
                   <td className="py-3 px-4">
                     <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                       {p.isRecommended && <Star className="h-3.5 w-3.5 fill-[#9933c1] text-[#9933c1] shrink-0" />}
-                      {p.name}
+                      {displayName(p)}
                     </div>
-                    <div className="text-xs text-zinc-400">{p.countryRegion ?? '—'} · {p.dataAmount ?? '—'} · {p.durationDays ?? '—'}d</div>
+                    <div className="text-xs text-zinc-400">{(p.isoCountry && esNameByIso[p.isoCountry]) || p.countryRegion || '—'} · {p.dataAmount ?? '—'} · {p.durationDays ?? '—'}d</div>
                   </td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">{p.costEur !== null ? `€${p.costEur}` : '—'}</td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">
