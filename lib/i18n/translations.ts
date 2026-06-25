@@ -190,7 +190,7 @@ export const translations: Record<Language, any> = {
       titleHighlight: 'Quiero',
       titleHighlight2: 'SIM',
       titleRest: ' Internet eSIM rápido, fácil y confiable',
-      subtitle: 'En más de 190 países desde $12 USD. Lo activas en minutos antes de despegar.',
+      subtitle: 'En más de 190 países desde $2 USD. Lo activas en minutos antes de despegar.',
       searchPlaceholder: '¿A dónde viajas?',
       seePlans: 'Ver planes',
       popular: 'Popular:',
