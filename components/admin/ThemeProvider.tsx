@@ -1,45 +1,61 @@
 'use client';
-import { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark';
 const THEME_KEY = 'admin-theme';
 
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+interface ThemeContextType {
+  theme: Theme;
+  toggleTheme: () => void;
 }
 
-function getSnapshot(): Theme {
-  return (localStorage.getItem(THEME_KEY) as Theme | null) ?? 'dark';
-}
-
-function getServerSnapshot(): Theme {
-  return 'dark';
-}
-
-const ThemeContext = createContext<{theme: Theme, toggleTheme: () => void}>({
-  theme: 'dark', toggleTheme: () => {}
+const ThemeContext = createContext<ThemeContextType>({
+  theme: 'dark',
+  toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Inicializamos en dark por defecto como estaba originalmente
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [mounted, setMounted] = useState(false);
 
-  // Sincroniza el DOM y persiste; actualizar sistemas externos sí va en un effect.
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
+    setMounted(true);
+    const savedTheme = localStorage.getItem(THEME_KEY) as Theme;
+    
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      // Por defecto dark
+      document.documentElement.classList.add('dark');
+      localStorage.setItem(THEME_KEY, 'dark');
+    }
+  }, []);
 
   const toggleTheme = () => {
-    localStorage.setItem(THEME_KEY, theme === 'dark' ? 'light' : 'dark');
-    listeners.forEach((listener) => listener());
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem(THEME_KEY, newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
-  return <ThemeContext.Provider value={{theme, toggleTheme}}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <div style={{ visibility: mounted ? 'visible' : 'hidden' }} className="min-h-screen transition-colors duration-300">
+        {children}
+      </div>
+    </ThemeContext.Provider>
+  );
 }
 
 export const useTheme = () => useContext(ThemeContext);

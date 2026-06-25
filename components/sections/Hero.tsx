@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Play, Compass, ShieldCheck, Zap, Download, Check, MapPin, Plane, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -12,7 +11,6 @@ import imagotipo from '@/images/imagotipo.svg';
 import chicasHeroImg from '@/src/assets/images/chicas-hero.jpg';
 
 export default function Hero() {
-  const [searchVal, setSearchVal] = useState('');
   const { t, lang } = useLanguage();
 
   const navigateToDestinations = () => {
@@ -22,42 +20,6 @@ export default function Hero() {
       const yCoord = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: yCoord, behavior: 'smooth' });
     }
-  };
-
-  const handleSearchChange = (val: string) => {
-    setSearchVal(val);
-  };
-
-  const handleSearchSubmit = () => {
-    if (!searchVal.trim()) return;
-    localStorage.setItem('hero_search_query', searchVal);
-    window.dispatchEvent(new CustomEvent('heroSearch', { detail: { query: searchVal } }));
-    navigateToDestinations();
-  };
-
-  const handlePopularClick = (item: { query: string, id?: string, region?: string }) => {
-    localStorage.setItem('hero_search_query', item.query);
-    
-    if (item.id) {
-      localStorage.setItem('hero_selected_id', item.id);
-    } else {
-      localStorage.removeItem('hero_selected_id');
-    }
-    
-    if (item.region) {
-      localStorage.setItem('hero_selected_region', item.region);
-    } else {
-      localStorage.removeItem('hero_selected_region');
-    }
-
-    window.dispatchEvent(new CustomEvent('heroSearch', { 
-      detail: { 
-        query: item.query,
-        id: item.id,
-        region: item.region
-      } 
-    }));
-    navigateToDestinations();
   };
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
@@ -141,52 +103,15 @@ export default function Hero() {
               {t('hero.subtitle')}
             </motion.p>
 
-            {/* Search bar inside Hero (HolaSim style) */}
-            <motion.div variants={itemVariants} className="pt-1">
-              <div className="flex flex-col sm:flex-row items-stretch gap-2 bg-white/80 p-1.5 rounded-2xl border border-zinc-200 shadow-sm backdrop-blur-md max-w-lg mx-auto lg:mx-0">
-                <div className="relative flex-1 flex items-center pl-3">
-                  <MapPin className="h-5 w-5 text-zinc-400 mr-2 shrink-0" />
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    value={searchVal}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    placeholder={t('hero.searchPlaceholder')}
-                    className="w-full bg-transparent text-zinc-900 font-sans text-sm focus:outline-none placeholder-zinc-400 py-2.5"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSearchSubmit();
-                    }}
-                  />
-                </div>
-                <QuieroButton
-                  variant="secondary"
-                  onClick={handleSearchSubmit}
-                  className="py-2.5 px-5 text-xs uppercase tracking-wider shrink-0 font-sans font-black flex items-center justify-center gap-1.5"
-                >
-                  {t('hero.seePlans')} <Zap className="h-3.5 w-3.5 fill-current" />
-                </QuieroButton>
-              </div>
-
-              {/* Quick links populares (HolaSim design) */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5 mt-2.5 text-[11px] font-sans">
-                <span className="text-zinc-500 font-bold mr-1">{t('hero.popular')}</span>
-                {[
-                  { label: `${t('hero.regions.europe')} 🇪🇺`, query: 'Europa Regional', id: 'europa-multi' },
-                  { label: `${t('hero.regions.spain')} 🇪🇸`, query: 'España', id: 'espana' },
-                  { label: `${t('hero.regions.usa')} 🇺🇸`, query: 'Estados Unidos', id: 'eeuu' },
-                  { label: `${t('hero.regions.brazil')} 🇧🇷`, query: 'Brasil', id: 'brasil' },
-                  { label: `${t('hero.regions.japan')} 🇯🇵`, query: 'Japón', id: 'japon' },
-                  { label: `${t('hero.regions.global')} 🌐`, query: 'Global (85+ Países)', id: 'global-multi' },
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handlePopularClick(item)}
-                    className="bg-zinc-100/50 hover:bg-[#b3ff6b]/20 hover:text-green-800 text-zinc-600 font-bold px-2.5 py-1 rounded-lg border border-zinc-200 hover:border-[#b3ff6b]/50 transition-all cursor-pointer"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+            {/* Call to Action */}
+            <motion.div variants={itemVariants} className="pt-5 pb-3 flex justify-center lg:justify-start">
+              <QuieroButton
+                variant="secondary"
+                onClick={navigateToDestinations}
+                className="px-10 py-4 text-[16px] uppercase tracking-widest font-sans font-black flex items-center gap-2 shadow-xl shadow-[#9933c1]/20 hover:shadow-[#9933c1]/30 transition-shadow"
+              >
+                {t('hero.seePlans')} <Zap className="h-4 w-4 fill-current" />
+              </QuieroButton>
             </motion.div>
 
             {/* Trust badge tags row */}

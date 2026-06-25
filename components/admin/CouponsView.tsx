@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Plus, Pencil, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, X, LayoutGrid, List } from 'lucide-react';
 import { usd, shortDate } from './format';
 import {
   createCoupon, updateCoupon, setCouponActive,
@@ -24,6 +24,13 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
   const router = useRouter();
   const [editing, setEditing] = useState<AdminCouponRow | 'new' | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setViewMode('grid');
+    }
+  }, []);
 
   const toggle = async (c: AdminCouponRow) => {
     setTogglingId(c.id);
@@ -34,12 +41,23 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
 
   return (
     <>
-      <button
-        onClick={() => setEditing('new')}
-        className="flex items-center gap-1.5 rounded-xl bg-[#9933c1] hover:bg-[#7100a5] px-4 py-2 text-sm font-bold text-white transition cursor-pointer"
-      >
-        <Plus className="h-4 w-4" /> Nuevo cupón
-      </button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <button
+          onClick={() => setEditing('new')}
+          className="flex items-center gap-1.5 rounded-xl bg-[#9933c1] hover:bg-[#7100a5] px-4 py-2 text-sm font-bold text-white transition cursor-pointer"
+        >
+          <Plus className="h-4 w-4" /> Nuevo cupón
+        </button>
+
+        <div className="flex bg-zinc-100 dark:bg-black/30 rounded-xl p-1 shrink-0 border border-zinc-200 dark:border-white/10 ml-auto sm:ml-0">
+          <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#9933c1] dark:text-[#b3ff6b]' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+            <List className="h-4 w-4" />
+          </button>
+          <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#9933c1] dark:text-[#b3ff6b]' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       {coupons.length === 0 ? (
         <p className="text-sm text-zinc-400 py-10 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10">
@@ -47,7 +65,8 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
         </p>
       ) : (
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto">
+          {viewMode === 'list' ? (
+            <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[820px]">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
@@ -98,6 +117,40 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
               </tbody>
             </table>
           </div>
+          ) : (
+            <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {coupons.map((c) => {
+                const st = couponState(c);
+                return (
+                  <div key={c.id} className="border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col bg-zinc-50 dark:bg-black/20 hover:border-[#9933c1]/30 transition-colors">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">{c.code}</span>
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${st.cls}`}>{st.label}</span>
+                    </div>
+                    
+                    <div className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      {c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `${usd(c.discountValue)} OFF`}
+                    </div>
+                    
+                    <div className="text-[11px] text-zinc-500 mb-3 space-y-0.5">
+                      <p>Usos: {c.uses}{c.maxUsesGlobal !== null ? ` / ${c.maxUsesGlobal}` : c.singleUseGlobal ? ' / 1' : ''}</p>
+                      {c.expiresAt && <p>Vence: {shortDate(c.expiresAt)}</p>}
+                      <p>{c.singleUsePerAccount ? '1×cuenta · ' : ''}{c.nonStackable ? 'no acumulable' : ''}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-zinc-200 dark:border-white/10 pt-3 mt-auto">
+                      <button onClick={() => setEditing(c)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition cursor-pointer">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                      <button onClick={() => toggle(c)} disabled={togglingId === c.id} className={`flex items-center justify-center text-xs font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-50 cursor-pointer min-w-[85px] ${c.isActive ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10' : 'border-[#b3ff6b]/50 text-green-700 hover:bg-[#b3ff6b]/10 dark:text-[#b3ff6b] dark:hover:bg-[#b3ff6b]/20'}`}>
+                        {togglingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : c.isActive ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

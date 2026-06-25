@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Pencil, RotateCcw, Star, X } from 'lucide-react';
+import { Loader2, Pencil, RotateCcw, Star, X, LayoutGrid, List } from 'lucide-react';
 import { usd } from './format';
 import { updatePlanPricing, setPlanStatus, setPlanRecommended, clearFixedPrice, type AdminPlanRow } from '@/server/actions/admin-plans';
 
@@ -16,6 +16,13 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
   const [query, setQuery] = useState('');
   const [onlyRec, setOnlyRec] = useState(false);
   const [onlyFixed, setOnlyFixed] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      setViewMode('grid');
+    }
+  }, []);
 
   // Nombre del país en español por ISO (el catálogo de YeSim viene en inglés),
   // para poder buscar "estados unidos" y que matchee "United States".
@@ -111,11 +118,22 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
           <input type="checkbox" checked={onlyFixed} onChange={(e) => setOnlyFixed(e.target.checked)} className="h-4 w-4 rounded accent-amber-500" />
           Solo modificados
         </label>
-        <span className="text-xs text-zinc-400 whitespace-nowrap">{filtered.length} de {plans.length}</span>
+        
+        <div className="flex bg-zinc-100 dark:bg-black/30 rounded-xl p-1 ml-auto shrink-0 border border-zinc-200 dark:border-white/10">
+          <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#9933c1] dark:text-[#b3ff6b]' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+            <List className="h-4 w-4" />
+          </button>
+          <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-white dark:bg-zinc-800 shadow-sm text-[#9933c1] dark:text-[#b3ff6b]' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
+
+        <span className="text-xs text-zinc-400 whitespace-nowrap hidden sm:inline-block">{filtered.length} de {plans.length}</span>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-        <div className="overflow-x-auto">
+        {viewMode === 'list' ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[820px]">
             <thead>
               <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
@@ -202,6 +220,51 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
             </tbody>
           </table>
         </div>
+        ) : (
+          <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {shown.map((p) => (
+              <div key={p.id} className="border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col bg-zinc-50 dark:bg-black/20 hover:border-[#9933c1]/30 transition-colors">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="font-bold text-zinc-900 dark:text-zinc-100 line-clamp-2">
+                    {displayName(p)}
+                  </div>
+                  {isSuperAdmin && (
+                    <button onClick={() => toggleRecommended(p)} disabled={recId === p.id} className="shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-50 transition cursor-pointer">
+                      {recId === p.id ? <Loader2 className="h-4 w-4 animate-spin text-zinc-400" /> : <Star className={`h-4 w-4 ${p.isRecommended ? 'fill-[#9933c1] text-[#9933c1]' : 'text-zinc-300 dark:text-zinc-600 hover:text-zinc-500'}`} />}
+                    </button>
+                  )}
+                </div>
+                <div className="text-xs text-zinc-500 mb-3">
+                  {countryLabel(p)} · {dataLabel(p)} · {p.durationDays ?? '—'}d
+                </div>
+                <div className="flex items-center gap-2 mb-4 mt-auto">
+                  <span className="text-sm font-black text-zinc-900 dark:text-white">{p.priceFinal !== null ? usd(p.priceFinal) : '—'}</span>
+                  {p.useFixedPrice && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">Fijo</span>}
+                  {p.useCustomMargin && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300">Margen</span>}
+                </div>
+                <div className="flex items-center justify-between border-t border-zinc-200 dark:border-white/10 pt-3">
+                  {isSuperAdmin ? (
+                    <>
+                      <button onClick={() => setEditing(p)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition cursor-pointer">
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                      <button onClick={() => toggleStatus(p)} disabled={togglingId === p.id} className={`flex items-center justify-center text-xs font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-50 cursor-pointer min-w-[85px] ${p.status === 'active' ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10' : 'border-[#b3ff6b]/50 text-green-700 hover:bg-[#b3ff6b]/10 dark:text-[#b3ff6b] dark:hover:bg-[#b3ff6b]/20'}`}>
+                        {togglingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : p.status === 'active' ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </>
+                  ) : (
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${p.status === 'active' ? 'bg-[#b3ff6b]/30 text-green-900 dark:bg-[#b3ff6b]/20 dark:text-[#b3ff6b]' : 'bg-zinc-100 text-zinc-500 dark:bg-white/10 dark:text-zinc-400'}`}>
+                      {p.status === 'active' ? 'Activo' : 'Inactivo'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {shown.length === 0 && (
+              <div className="col-span-full py-8 text-center text-zinc-500 text-sm">No se encontraron planes para esta búsqueda.</div>
+            )}
+          </div>
+        )}
       </div>
 
       {filtered.length > CAP && (

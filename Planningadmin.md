@@ -128,23 +128,23 @@ El panel sigue la guía de diseño de QuieroSIM:
 
 ---
 
-## Fase 6 — Afiliados (NUEVO — datos mock)
+## Fase 6 — Afiliados (NUEVO — datos mock) ✅
 
 **RF cubiertos:** RF-ADM-06, RF-AFF-01 a RF-AFF-08
-**Estado:** Solo sidebar entry (deshabilitado). Sin página ni lógica. Crearemos diseño completo con datos mock.
+**Estado:** YA IMPLEMENTADO — UI y navegación completa usando datos mock.
 
 ### 6.1 Listado de afiliados
-- [ ] Página `/admin/affiliates` con tabla mock → `tasks.md #AFF-LIST-01`
-- [ ] Columnas: Nombre, Canal, Audiencia, Estado, Ventas, Comisión pendiente, Comisión pagada
-- [ ] Badges: Pendiente (amarillo), Activo (verde `#b3ff6b`), Suspendido (rojo)
-- [ ] Filtro por estado
+- [x] Página `/admin/affiliates` con tabla mock → `tasks.md #AFF-LIST-01`
+- [x] Columnas: Nombre, Canal, Audiencia, Estado, Ventas, Comisión pendiente, Comisión pagada
+- [x] Badges: Pendiente (amarillo), Activo (verde `#b3ff6b`), Suspendido (rojo)
+- [x] Filtro por estado
 
 ### 6.2 Detalle de afiliado (modal o drawer)
-- [ ] Datos del formulario de solicitud → `tasks.md #AFF-DETAIL-01`
-- [ ] Link de referido y cupón propio
-- [ ] Tabla de ventas referidas (mock)
-- [ ] Botones: Aprobar / Suspender / Marcar comisión como pagada
-- [ ] Indicador multinivel (Nivel 1 → Nivel 2) — RF-AFF-04
+- [x] Datos del formulario de solicitud → `tasks.md #AFF-DETAIL-01`
+- [x] Link de referido y cupón propio
+- [x] Tabla de ventas referidas (mock)
+- [x] Botones: Aprobar / Suspender / Marcar comisión como pagada
+- [x] Indicador multinivel (Nivel 1 → Nivel 2) — RF-AFF-04
 
 ---
 

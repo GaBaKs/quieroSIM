@@ -1,8 +1,7 @@
-import Link from 'next/link';
 import { getOrders } from '@/server/actions/admin-orders';
-import StatusBadge from '@/components/admin/StatusBadge';
 import OrderFilters from '@/components/admin/OrderFilters';
-import { usd, shortDate } from '@/components/admin/format';
+import OrdersListView from '@/components/admin/OrdersListView';
+import Link from 'next/link';
 
 /** Listado de órdenes con filtros por estado y búsqueda. Server component. */
 export default async function AdminOrdersPage({
@@ -33,38 +32,7 @@ export default async function AdminOrdersPage({
           No hay órdenes para este filtro.
         </p>
       ) : (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[760px]">
-              <thead>
-                <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Orden</th>
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Email</th>
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Monto</th>
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Estado</th>
-                  <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Fecha</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                {list.rows.map((o) => (
-                  <tr key={o.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-4">
-                      <Link href={`/admin/orders/${o.id}`} className="font-bold text-[#9933c1] dark:text-[#b3ff6b] hover:underline">
-                        #{o.shortId}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300 max-w-[200px] truncate">{o.email ?? '—'}</td>
-                    <td className="py-3 px-4 text-sm text-zinc-700 dark:text-zinc-300">{o.planName}</td>
-                    <td className="py-3 px-4 text-sm font-bold text-zinc-900 dark:text-white">{usd(o.pricePaid)}</td>
-                    <td className="py-3 px-4"><StatusBadge kind="order" value={o.status} /></td>
-                    <td className="py-3 px-4 text-sm text-zinc-500">{shortDate(o.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <OrdersListView rows={list.rows} />
       )}
 
       {/* Paginación */}

@@ -9,7 +9,6 @@ import CheckoutModal from '@/components/CheckoutModal';
 import QuieroButton from '../ui/QuieroButton';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { translateFeature } from '@/lib/i18n/featureTranslator';
-import Globe from '@/components/ui/Globe';
 
 interface DestinationsProps {
   /** Destinos activos con planes reales (vienen de la BD vía app/page.tsx). */
@@ -18,30 +17,6 @@ interface DestinationsProps {
   plansByDestination: Record<string, Plan[]>;
 }
 
-const COUNTRY_COORDINATES: Record<string, { lat: number; lng: number }> = {
-  'US': { lat: 38, lng: -97 },
-  'ES': { lat: 32, lng: -5 },
-  'FR': { lat: 45, lng: 2 },
-  'IT': { lat: 30, lng: 25 },
-  'GB': { lat: 65, lng: -15 },
-  'MX': { lat: 23, lng: -102 },
-  'BR': { lat: -14, lng: -51 },
-  'JP': { lat: 36, lng: 138 },
-  'DE': { lat: 58, lng: 25 },
-  'CO': { lat: 4, lng: -74 },
-  'PE': { lat: -9, lng: -75 },
-  'CL': { lat: -35, lng: -71 },
-  'AR': { lat: -38, lng: -63 },
-  'UY': { lat: -32, lng: -55 },
-  'PT': { lat: 28, lng: -25 },
-  'NL': { lat: 62, lng: 10 },
-  'CH': { lat: 42, lng: 15 },
-  'CA': { lat: 56, lng: -106 },
-  'AU': { lat: -25, lng: 133 },
-  'AE': { lat: 23, lng: 54 },
-  'EU': { lat: 48, lng: 35 }, // Europa regional
-  'GLOBAL': { lat: 0, lng: 0 }
-};
 
 export default function Destinations({ destinations, plansByDestination }: DestinationsProps) {
   const { fadeUp } = useScrollReveal();
@@ -76,7 +51,40 @@ export default function Destinations({ destinations, plansByDestination }: Desti
       'Canadá': ['toronto', 'vancouver', 'montreal', 'quebec', 'ottawa', 'calgary'],
       'Australia': ['sydney', 'melbourne', 'brisbane', 'perth', 'gold coast'],
       'Emiratos Árabes Unidos': ['dubai', 'abu dhabi'],
-      'Europa Regional': ['europa', 'euro', 'schengen']
+      'Europa Regional': ['europa', 'euro', 'schengen'],
+      'Tailandia': ['bangkok', 'phuket', 'chiang mai', 'pattaya', 'krabi'],
+      'Corea del Sur': ['seul', 'seoul', 'busan', 'jeju'],
+      'China': ['pekin', 'beijing', 'shanghai', 'hong kong', 'macao', 'guangzhou', 'shenzhen'],
+      'Turquía': ['estambul', 'istanbul', 'ankara', 'antalya', 'capadocia'],
+      'Grecia': ['atenas', 'santorini', 'mykonos', 'creta', 'rodas'],
+      'Egipto': ['el cairo', 'cairo', 'luxor', 'asuan', 'alejandria', 'sharm el-sheij'],
+      'Sudáfrica': ['ciudad del cabo', 'cape town', 'johanesburgo', 'durban'],
+      'India': ['nueva delhi', 'delhi', 'mumbai', 'bombay', 'goa', 'bangalore', 'agra'],
+      'Indonesia': ['bali', 'yakarta', 'jakarta', 'lombok', 'komodo'],
+      'Vietnam': ['hanoi', 'ho chi minh', 'saigon', 'halong', 'da nang'],
+      'Nueva Zelanda': ['auckland', 'wellington', 'christchurch', 'queenstown'],
+      'Costa Rica': ['san jose', 'tamarindo', 'manuel antonio', 'jaco'],
+      'República Dominicana': ['punta cana', 'santo domingo', 'puerto plata', 'bavaro'],
+      'Puerto Rico': ['san juan', 'ponce', 'fajardo'],
+      'Ecuador': ['quito', 'guayaquil', 'galapagos', 'cuenca'],
+      'Bolivia': ['la paz', 'sucre', 'santa cruz', 'uyuni'],
+      'Paraguay': ['asuncion', 'ciudad del este', 'encarnacion'],
+      'Suecia': ['estocolmo', 'gotemburgo', 'malmo'],
+      'Noruega': ['oslo', 'bergen', 'tromso'],
+      'Dinamarca': ['copenhague', 'aarhus'],
+      'Finlandia': ['helsinki', 'laponia'],
+      'Irlanda': ['dublin', 'cork', 'galway'],
+      'Bélgica': ['bruselas', 'brujas', 'gante', 'amberes'],
+      'Austria': ['viena', 'salzburgo', 'innsbruck'],
+      'Polonia': ['varsovia', 'cracovia', 'gdansk'],
+      'República Checa': ['praga', 'brno'],
+      'Hungría': ['budapest'],
+      'Croacia': ['dubrovnik', 'split', 'zagreb'],
+      'Marruecos': ['marrakech', 'casablanca', 'fez', 'rabat'],
+      'Filipinas': ['manila', 'boracay', 'cebu', 'palawan'],
+      'Singapur': ['singapur', 'singapore'],
+      'Malasia': ['kuala lumpur', 'penang', 'langkawi'],
+      'Taiwán': ['taipei', 'taiwan']
     };
 
     return destinations.filter(dest => {
@@ -106,7 +114,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
   const ITEM_WIDTH = 110;
   const GAP = 16;
   const STEP = ITEM_WIDTH + GAP;
-  const MULTIPLIER = 40; // For infinite loop feel
+  const MULTIPLIER = 4; // For infinite loop feel, reduced to prevent lag
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -281,53 +289,14 @@ export default function Destinations({ destinations, plansByDestination }: Desti
 
   const activePlans = useMemo(() => {
     if (!activeDestination) return [];
-    return plansByDestination[activeDestination.id] ?? [];
+    const plans = plansByDestination[activeDestination.id] ?? [];
+    return [...plans].sort((a, b) => {
+      if (a.isPopular && !b.isPopular) return -1;
+      if (!a.isPopular && b.isPopular) return 1;
+      return 0;
+    });
   }, [activeDestination, plansByDestination]);
 
-  const globeMarkers = useMemo(() => {
-    return destinations
-      .map(dest => {
-        const coords = COUNTRY_COORDINATES[dest.code];
-        if (!coords) return null;
-        return {
-          lat: coords.lat,
-          lng: coords.lng,
-          label: dest.code
-        };
-      })
-      .filter(Boolean) as { lat: number; lng: number; label?: string }[];
-  }, [destinations]);
-
-  const globeConnections = useMemo(() => {
-    const connections: { from: [number, number]; to: [number, number] }[] = [];
-    const activeCoords = COUNTRY_COORDINATES[activeDestination.code];
-    
-    if (!activeCoords || (activeCoords.lat === 0 && activeCoords.lng === 0)) {
-      if (globeMarkers.length >= 2) {
-        for (let i = 0; i < Math.min(8, globeMarkers.length); i++) {
-           const from = globeMarkers[i];
-           const to = globeMarkers[(i + 3) % globeMarkers.length];
-           connections.push({ from: [from.lat, from.lng], to: [to.lat, to.lng] });
-        }
-      }
-      return connections;
-    }
-
-    const others = globeMarkers.filter(
-      m => Math.abs(m.lat - activeCoords.lat) > 1 || Math.abs(m.lng - activeCoords.lng) > 1
-    );
-    
-    const maxConns = Math.min(5, others.length);
-    for (let i = 0; i < maxConns; i++) {
-      const idx = Math.floor((i * others.length) / maxConns);
-      connections.push({
-        from: [activeCoords.lat, activeCoords.lng],
-        to: [others[idx].lat, others[idx].lng]
-      });
-    }
-
-    return connections;
-  }, [globeMarkers, activeDestination.code]);
 
   // Listen to search changes from Hero or localStorage
   useEffect(() => {
@@ -457,9 +426,9 @@ export default function Destinations({ destinations, plansByDestination }: Desti
         {/* ---------------------------------------------------- */}
         {/* NEW HORIZONTAL TIMELINE CAROUSEL OF DESTINATIONS */}
         {/* ---------------------------------------------------- */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 max-w-6xl mx-auto mb-16">
+        <div className="flex flex-col items-center justify-center max-w-6xl mx-auto mb-16">
           
-          <div className="relative w-full lg:w-[60%] shrink-0">
+          <div className="relative w-full shrink-0">
             {/* Subtle fade edges to cover the overflow area */}
             <div className="absolute left-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-r from-white to-transparent pointer-events-none z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-8 sm:w-16 bg-gradient-to-l from-white to-transparent pointer-events-none z-10" />
@@ -533,15 +502,6 @@ export default function Destinations({ destinations, plansByDestination }: Desti
             </div>
           </div>
 
-          {/* Interactive Globe Container */}
-          <div className="w-full lg:w-[40%] flex justify-center items-center shrink-0">
-            <Globe 
-              size={320} 
-              focusCoordinates={COUNTRY_COORDINATES[activeDestination.code] || COUNTRY_COORDINATES['GLOBAL']} 
-              markers={globeMarkers}
-              connections={globeConnections}
-            />
-          </div>
         </div>
 
         {/* ---------------------------------------------------- */}

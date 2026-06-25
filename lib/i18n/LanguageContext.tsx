@@ -69,7 +69,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    // En Next.js SSR/Turbopack a veces el contexto no se hidrata a tiempo en layouts anidados.
+    // Retornamos un fallback seguro en lugar de crashear la app.
+    return {
+      lang: 'ES' as Language,
+      setLang: () => {},
+      t: (key: string) => key
+    };
   }
   return context;
 }

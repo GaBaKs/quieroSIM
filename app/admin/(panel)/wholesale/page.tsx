@@ -1,14 +1,21 @@
-import ComingSoon from '@/components/admin/ComingSoon';
+import { Metadata } from 'next';
+import WholesaleMock from '@/components/admin/WholesaleMock';
 
-/** Mayoristas / agencias (Fase 8 — sin construir). Placeholder. */
-export default function AdminWholesalePage() {
+export const metadata: Metadata = {
+  title: 'Mayoristas | Admin Panel',
+};
+
+export default function WholesalePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">Mayoristas</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Gestión de agencias, compras en lote e inventario de eSIMs.</p>
+        <h1 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white mb-2">Agencias Mayoristas</h1>
+        <p className="text-zinc-500 dark:text-zinc-400">
+          Gestión de compras en lote y agencias asociadas. (Modo Mock)
+        </p>
       </div>
-      <ComingSoon description="El portal mayorista para agencias estará disponible próximamente." />
+      
+      <WholesaleMock />
     </div>
   );
 }
