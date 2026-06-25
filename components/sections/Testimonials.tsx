@@ -64,32 +64,34 @@ export default function Testimonials() {
               “
             </div>
 
-            <div className="min-h-[140px] md:min-h-[160px] relative mt-2">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={activeIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-6"
+            {/* Grid overlap technique to dynamically size to tallest review without jumping */}
+            <div className="relative mt-2 grid grid-cols-1 grid-rows-1">
+              {reviews.map((review, idx) => (
+                <div
+                  key={review.id}
+                  className={`col-start-1 row-start-1 transition-all duration-300 space-y-6 ${
+                    activeIndex === idx 
+                      ? 'opacity-100 translate-y-0 z-10' 
+                      : 'opacity-0 translate-y-2 z-0 pointer-events-none'
+                  }`}
+                  aria-hidden={activeIndex !== idx}
                 >
                   <p className="font-sans text-lg text-slate-600 leading-[1.8] font-normal">
-                    {currentReview.text}
+                    {review.text}
                   </p>
                   
                   {/* Name and verified buyer */}
                   <div className="flex items-center gap-2 pt-2">
                     <span className="font-sans text-[15px] font-semibold text-[#9933c1]">
-                      {currentReview.name}
+                      {review.name}
                     </span>
                     <BadgeCheck className="w-[18px] h-[18px] text-[#9933c1] ml-1" />
                     <span className="font-sans text-[14px] font-medium text-[#9933c1]">
                       {t('testimonials.verifiedBuyer')}
                     </span>
                   </div>
-                </motion.div>
-              </AnimatePresence>
+                </div>
+              ))}
             </div>
 
             {/* Navigation Controls */}

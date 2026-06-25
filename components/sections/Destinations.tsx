@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Destination, Plan } from '@/lib/types';
-import { Search, MapPin, Sparkles, Shield, Tag, Calendar, HelpCircle, Check } from 'lucide-react';
+import { Search, MapPin, Sparkles, Shield, Tag, Calendar, HelpCircle, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import CheckoutModal from '@/components/CheckoutModal';
@@ -18,6 +18,33 @@ interface DestinationsProps {
 }
 
 
+
+function FeatureItem({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 65;
+
+  if (text.length <= LIMIT) {
+    return <span className="leading-tight break-words">{text}</span>;
+  }
+
+  const displayText = expanded ? text : text.slice(0, LIMIT) + '...';
+
+  return (
+    <span className="leading-tight break-words">
+      {displayText}
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}
+        className="text-[#9933c1] font-bold ml-1 hover:underline text-[11px] inline-flex"
+      >
+        {expanded ? 'Ver menos' : 'Ver más'}
+      </button>
+    </span>
+  );
+}
+
 export default function Destinations({ destinations, plansByDestination }: DestinationsProps) {
   const { fadeUp } = useScrollReveal();
   const [selectedRegion, setSelectedRegion] = useState<'All' | 'Americas' | 'Europe' | 'Asia' | 'Africa' | 'Global'>('All');
@@ -26,6 +53,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<Plan | null>(null);
   const { t, lang } = useLanguage();
+  const [showAllPlans, setShowAllPlans] = useState(false);
 
   // Filtered list of destinations
   const filteredDestinations = useMemo(() => {
@@ -271,6 +299,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
     const destId = e.currentTarget.dataset.id;
     if (destId) {
       setSelectedDestId(destId);
+      setShowAllPlans(false);
     }
   }, []);
 
@@ -544,8 +573,8 @@ export default function Destinations({ destinations, plansByDestination }: Desti
               ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
               : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
           }`}>
-            <AnimatePresence mode="popLayout">
-            {activePlans.map((plan, idx) => {
+            <AnimatePresence>
+            {(showAllPlans ? activePlans : activePlans.slice(0, 3)).map((plan, idx) => {
               const isPopular = plan.isPopular;
 
               return (
@@ -589,7 +618,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
                         return (
                           <li key={i} className="flex items-start gap-2">
                             <Check className="h-3.5 w-3.5 text-[#9933c1] flex-shrink-0 mt-0.5" />
-                            <span className="leading-tight">{localizedFeat}</span>
+                            <FeatureItem text={localizedFeat} />
                           </li>
                         );
                       })}
@@ -621,6 +650,36 @@ export default function Destinations({ destinations, plansByDestination }: Desti
             })}
             </AnimatePresence>
           </div>
+          {/* Show More Button if there are more than 3 plans */}
+          {activePlans.length > 3 && (
+            <motion.div layout className="flex justify-center mt-8">
+              <motion.button
+                layout
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (showAllPlans) {
+                    const el = document.getElementById('plans-display-anchor');
+                    if (el) {
+                      const yOffset = -100;
+                      const yCoord = el.getBoundingClientRect().top + window.scrollY + yOffset;
+                      window.scrollTo({ top: yCoord, behavior: 'smooth' });
+                    }
+                  }
+                  setShowAllPlans(!showAllPlans);
+                }}
+                className="text-sm font-bold text-[#9933c1] transition-colors border border-[#9933c1]/20 bg-[#9933c1]/5 hover:bg-[#9933c1]/10 px-6 py-2.5 rounded-full flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                {showAllPlans ? 'Ocultar planes' : `Ver todos los planes (${activePlans.length})`}
+                <motion.div
+                  animate={{ rotate: showAllPlans ? 180 : 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </motion.div>
+              </motion.button>
+            </motion.div>
+          )}
 
           {/* Trust description block */}
           <div className="rounded-xl border border-black/5 p-4 bg-[#fafafa] text-xs text-zinc-500 flex items-start gap-2.5 leading-relaxed font-sans mt-8">

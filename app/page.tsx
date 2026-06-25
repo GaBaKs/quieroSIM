@@ -27,8 +27,8 @@ export default async function Home() {
       {/* Main Sections flow */}
       <main className="flex-grow">
         <Hero />
-        <HowItWorks />
         <Destinations destinations={catalog.destinations} plansByDestination={catalog.plansByDestination} />
+        <HowItWorks />
         <Compatibility devices={devices} />
         <Comparison />
         <AboutUs />
