@@ -56,7 +56,15 @@ function RegisterForm() {
     if (signUpError) {
       // Token de Turnstile gastado en este intento → reset para el próximo.
       turnstileRef.current?.reset();
-      setError(t('auth.errorInvalid'));
+      // Mostrar el motivo real (no "email/contraseña incorrectos", que confunde en un alta).
+      const code = signUpError.code ?? '';
+      const msg = (signUpError.message ?? '').toLowerCase();
+      if (code === 'weak_password' || msg.includes('weak')) setError(t('auth.errorPasswordWeak'));
+      else if (code === 'email_address_invalid' || msg.includes('email') && msg.includes('invalid')) setError(t('auth.errorEmailInvalid'));
+      else if (code === 'user_already_exists' || code === 'email_exists') setError(t('auth.errorEmailTaken'));
+      else if (signUpError.status === 429 || code.includes('rate') || msg.includes('rate limit')) setError(t('auth.errorRateLimit'));
+      else if (msg.includes('captcha')) setError(t('auth.errorCaptcha'));
+      else setError(t('auth.errorInvalid'));
       return;
     }
     // Email ya registrado: Supabase devuelve un user "fantasma" sin identities.

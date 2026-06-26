@@ -42,9 +42,11 @@ function LoginForm() {
       // El token de Turnstile es de un solo uso: lo gastó este intento, así que
       // reseteamos el widget para que el próximo intento mande uno nuevo.
       turnstileRef.current?.reset();
-      setError(
-        signInError?.message === 'Email not confirmed' ? t('auth.errorUnconfirmed') : t('auth.errorInvalid'),
-      );
+      const msg = (signInError?.message ?? '').toLowerCase();
+      if (signInError?.message === 'Email not confirmed') setError(t('auth.errorUnconfirmed'));
+      else if (msg.includes('captcha')) setError(t('auth.errorCaptcha'));
+      else if (signInError?.status === 429 || msg.includes('rate limit')) setError(t('auth.errorRateLimit'));
+      else setError(t('auth.errorInvalid'));
       return;
     }
 
