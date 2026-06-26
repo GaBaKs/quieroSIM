@@ -153,7 +153,7 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
       {/* Afiliados */}
       {tab === 'affiliates' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardCls}>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Se guardan ahora; aplican cuando el módulo de afiliados esté activo.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Comisiones, mínimo de retiro y descuento default de los cupones de afiliado.</p>
           <div>
             <label className={labelCls}>Comisión Nivel 1 (%)</label>
             <input type="number" value={form.commissionL1Pct} onChange={(e) => set('commissionL1Pct', e.target.value)} className={inputCls} min="0" max="100" />

@@ -33,7 +33,7 @@ const navigation = [
   { name: 'Usuarios', href: '/admin/users', icon: Users },
   { name: 'Planes', href: '/admin/plans', icon: Globe2 },
   { name: 'Cupones', href: '/admin/coupons', icon: Ticket },
-  { name: 'Afiliados (por hacer)', href: '/admin/affiliates', icon: Network },
+  { name: 'Afiliados', href: '/admin/affiliates', icon: Network },
   { name: 'Mayoristas (por hacer)', href: '/admin/wholesale', icon: Building2 },
   { name: 'Soporte (por hacer)', href: '/admin/support', icon: HeadphonesIcon },
   { name: 'YeSIM API', href: '/admin/yesim', icon: Smartphone, superAdminOnly: true },
