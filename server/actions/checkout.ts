@@ -80,6 +80,14 @@ export interface CouponPreview {
 /** Cobro mínimo de Stripe (USD). No se puede cobrar menos que esto. */
 const MIN_CHARGE_USD = 0.5;
 
+/**
+ * Nombre de la Edge Function de checkout. En producción es 'checkout' (Stripe
+ * live). En local, seteando CHECKOUT_FN_NAME=checkout-test en .env.local, se
+ * apunta a la función espejo que usa STRIPE_SECRET_KEY_TEST (Stripe test) sin
+ * tocar producción. Vercel no define la variable → siempre usa 'checkout'.
+ */
+const CHECKOUT_FN = process.env.CHECKOUT_FN_NAME ?? 'checkout';
+
 const orderStatusSchema = z.object({
   orderId: z.string().uuid(),
   email: z.string().email(),
@@ -135,14 +143,14 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Result
   // El Edge resuelve y valida el afiliado; acá solo lo reenviamos.
   const aff = (await cookies()).get('qs_aff')?.value;
   const affiliateRef = aff && /^[A-Za-z0-9_-]{1,64}$/.test(aff) ? aff : undefined;
-  return callEdgeFunction<CheckoutResult>('checkout/create', { ...parsed.data, affiliateRef });
+  return callEdgeFunction<CheckoutResult>(`${CHECKOUT_FN}/create`, { ...parsed.data, affiliateRef });
 }
 
 /** Estado de la orden para el polling post-pago (valida orderId+email — apto guests). */
 export async function getOrderStatus(input: { orderId: string; email: string }): Promise<Result<OrderStatusInfo>> {
   const parsed = parseInput(orderStatusSchema, input);
   if (!parsed.ok) return parsed;
-  return callEdgeFunction<OrderStatusInfo>('checkout/status', parsed.data);
+  return callEdgeFunction<OrderStatusInfo>(`${CHECKOUT_FN}/status`, parsed.data);
 }
 
 /**
