@@ -113,3 +113,59 @@ export async function setAffiliateStatus(input: {
   revalidatePath('/admin/affiliates');
   return ok({ status: parsed.data.status });
 }
+
+export interface PendingWithdrawal {
+  id: string;
+  affiliateName: string;
+  affiliateEmail: string;
+  amount: number;
+  requestedAt: string | null;
+}
+
+/** Retiros pendientes de pago (para que el admin pague por fuera y marque pagado). */
+export async function getPendingWithdrawals(): Promise<Result<PendingWithdrawal[]>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('withdrawal_request')
+    .select('id, amount, requested_at, affiliate_profile:affiliate_profile_id(user_profile:user_id(email, full_name))')
+    .in('status', ['pending', 'approved'])
+    .order('requested_at', { ascending: true });
+  if (error) {
+    logger.error('getPendingWithdrawals falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos cargar los retiros.');
+  }
+  const rows: PendingWithdrawal[] = (data ?? []).map((w) => {
+    const ap = Array.isArray(w.affiliate_profile) ? w.affiliate_profile[0] : w.affiliate_profile;
+    const up = ap && (Array.isArray(ap.user_profile) ? ap.user_profile[0] : ap.user_profile);
+    return {
+      id: w.id,
+      affiliateName: up?.full_name ?? '—',
+      affiliateEmail: up?.email ?? '—',
+      amount: Number(w.amount ?? 0),
+      requestedAt: w.requested_at,
+    };
+  });
+  return ok(rows);
+}
+
+const withdrawalSchema = z.object({ withdrawalId: z.string().uuid() });
+
+/** Marca un retiro como pagado (el pago real es externo). Asiento + auditoría en la RPC. */
+export async function markWithdrawalPaid(input: { withdrawalId: string }): Promise<Result<null>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(withdrawalSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('admin_mark_withdrawal_paid' as never, { p_id: parsed.data.withdrawalId } as never);
+  if (error) {
+    logger.error('markWithdrawalPaid falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos marcar el retiro como pagado.');
+  }
+  const r = data as { ok?: boolean; reason?: string } | null;
+  if (!r?.ok) return err(ErrorCodes.VALIDATION, r?.reason ?? 'No se pudo marcar.');
+  revalidatePath('/admin/affiliates');
+  return ok(null);
+}

@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 import { err, ok, type Result } from '../types/result';
 import { ErrorCodes } from '../lib/errors';
 import { parseInput } from '../lib/validation';
@@ -122,7 +123,11 @@ async function callEdgeFunction<T>(path: string, body: unknown): Promise<Result<
 export async function createCheckout(input: CreateCheckoutInput): Promise<Result<CheckoutResult>> {
   const parsed = parseInput(createCheckoutSchema, input);
   if (!parsed.ok) return parsed;
-  return callEdgeFunction<CheckoutResult>('checkout/create', parsed.data);
+  // Referido de afiliado: viene de la cookie qs_aff (server-side, no del cliente).
+  // El Edge resuelve y valida el afiliado; acá solo lo reenviamos.
+  const aff = (await cookies()).get('qs_aff')?.value;
+  const affiliateRef = aff && /^[A-Za-z0-9_-]{1,64}$/.test(aff) ? aff : undefined;
+  return callEdgeFunction<CheckoutResult>('checkout/create', { ...parsed.data, affiliateRef });
 }
 
 /** Estado de la orden para el polling post-pago (valida orderId+email — apto guests). */

@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Smartphone, HelpCircle, X, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { Smartphone, HelpCircle, X, ShieldCheck, LifeBuoy, Users } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import { useAccountTheme } from './AccountThemeProvider';
 import AccountLogout from './AccountLogout';
 
 const navigation = [
   { name: 'Mis eSIMs', href: '/account', icon: Smartphone, exact: true },
+  { name: 'Afiliados', href: '/account/affiliate', icon: Users },
   { name: 'Ayuda y Soporte (por hacer)', href: '/account/support', icon: LifeBuoy },
   { name: 'Preguntas Frecuentes', href: '/account/faq', icon: HelpCircle },
 ];

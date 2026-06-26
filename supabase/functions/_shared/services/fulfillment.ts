@@ -5,6 +5,7 @@
 
 import { runProvision } from './provisioning.ts';
 import { createSupabaseProvisionStore } from './provision-store-supabase.ts';
+import { accrueCommissions } from './commissions.ts';
 import { createYesimClient } from '../yesim/client.ts';
 import { createYesimMock } from '../yesim/mock/handler.ts';
 import { createResendClient } from '../email/resend.ts';
@@ -98,6 +99,7 @@ export function startProvisionAndDeliver(supabase: any, orderId: string): Promis
       if (r.ok && r.data.state === 'fulfilled') {
         await deliverQrForOrder(supabase, orderId);
         await deliverQrWhatsappForOrder(supabase, orderId);
+        await accrueCommissions(supabase, orderId); // comisiones de afiliado (si aplica)
       }
     })
     .catch((e) => console.error('provision error', e instanceof Error ? e.message : String(e)));

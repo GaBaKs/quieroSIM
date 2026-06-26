@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
       return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento y probá de nuevo.', 429);
     }
 
-    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd } = body as {
-      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number;
+    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd, affiliateRef } = body as {
+      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number; affiliateRef?: string;
     };
     // Idioma del comprador: define el idioma del email con el QR (Etapa 6).
     const orderLang = lang && ['ES', 'EN', 'PT'].includes(lang) ? lang : 'ES';
@@ -117,6 +117,23 @@ Deno.serve(async (req: Request) => {
       finalUsd = Math.max(0, priceUsd - discountApplied);
     }
 
+    // Atribución de afiliado (A3): por cupón de afiliado (prioridad) o por link de
+    // referido (cookie qs_aff → affiliateRef). Solo afiliados 'approved' y nunca la
+    // propia compra del afiliado. Se guarda en order.affiliate_profile_id (L1); el
+    // L2 lo deriva el motor de comisiones desde referred_by_affiliate_id.
+    let affiliateProfileId: string | null = null;
+    if (couponId) {
+      const { data: cp } = await supabase.from('coupon').select('affiliate_profile_id').eq('id', couponId).maybeSingle();
+      if (cp?.affiliate_profile_id) {
+        const { data: ap } = await supabase.from('affiliate_profile').select('id, status, user_id').eq('id', cp.affiliate_profile_id).maybeSingle();
+        if (ap?.status === 'approved' && ap.user_id !== userId) affiliateProfileId = ap.id;
+      }
+    }
+    if (!affiliateProfileId && affiliateRef && /^[A-Za-z0-9_-]{1,64}$/.test(affiliateRef)) {
+      const { data: ap } = await supabase.from('affiliate_profile').select('id, status, user_id').eq('referral_link', affiliateRef).maybeSingle();
+      if (ap?.status === 'approved' && ap.user_id !== userId) affiliateProfileId = ap.id;
+    }
+
     // ── Camino pago-cero ──────────────────────────────────────────────────────
     // Cupón 'free' o descuento que cubre el 100%: NO se cobra ni se crea
     // PaymentIntent. Se crea la orden, se marca pagada y se emite la eSIM directo
@@ -132,6 +149,7 @@ Deno.serve(async (req: Request) => {
           price_paid: 0,
           currency_sale: 'USD',
           coupon_id: couponId,
+          affiliate_profile_id: affiliateProfileId,
           discount_applied: priceUsd,
           terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
@@ -189,6 +207,7 @@ Deno.serve(async (req: Request) => {
         price_paid: finalUsd,
         currency_sale: 'USD',
         coupon_id: couponId,
+        affiliate_profile_id: affiliateProfileId,
         discount_applied: discountApplied,
         terms_accepted: true,
         terms_accepted_at: new Date().toISOString(),
