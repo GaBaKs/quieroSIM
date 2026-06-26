@@ -102,7 +102,7 @@ function LoginForm() {
             </p>
           )}
 
-          <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
+          <Turnstile ref={turnstileRef} onToken={setCaptchaToken} theme={mounted ? theme : 'dark'} />
 
           <div className="pt-6">
             <QuieroButton

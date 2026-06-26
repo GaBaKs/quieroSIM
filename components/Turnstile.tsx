@@ -30,10 +30,11 @@ export interface TurnstileHandle {
   reset: () => void;
 }
 
-const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void }>(function Turnstile(
-  { onToken },
-  ref,
-) {
+/** Tema visual del widget. 'auto' sigue la preferencia del SO. */
+export type TurnstileTheme = 'light' | 'dark' | 'auto';
+
+const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void; theme?: TurnstileTheme }>(
+  function Turnstile({ onToken, theme = 'auto' }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
@@ -59,6 +60,7 @@ const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void
       if (cancelled || !window.turnstile || !containerRef.current || widgetIdRef.current) return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        theme,
         callback: (token: string) => onToken(token),
         'expired-callback': () => onToken(''),
         'error-callback': () => onToken(''),
@@ -96,7 +98,7 @@ const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void
         widgetIdRef.current = null;
       }
     };
-  }, [onToken]);
+  }, [onToken, theme]);
 
   return <div ref={containerRef} className="flex justify-center" />;
 });

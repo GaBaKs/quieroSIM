@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
-            <Turnstile onToken={setCaptchaToken} />
+            <Turnstile onToken={setCaptchaToken} theme="light" />
             <QuieroButton
               variant="primary"
               type="submit"
