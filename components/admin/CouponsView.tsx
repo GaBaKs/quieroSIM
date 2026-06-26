@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Plus, Pencil, X, LayoutGrid, List } from 'lucide-react';
+import { Loader2, Plus, Pencil, X, LayoutGrid, List, AlertCircle } from 'lucide-react';
 import { usd, shortDate } from './format';
 import {
   createCoupon, updateCoupon, setCouponActive,
@@ -90,7 +90,7 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                        {c.discountType === 'percentage' ? `${c.discountValue}%` : usd(c.discountValue)}
+                        {c.discountType === 'free' ? 'Gratis' : c.discountType === 'percentage' ? `${c.discountValue}%` : usd(c.discountValue)}
                         {c.minPurchase ? <span className="block text-[11px] font-normal text-zinc-400">mín. {usd(c.minPurchase)}</span> : null}
                       </td>
                       <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">
@@ -129,7 +129,7 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
                     </div>
                     
                     <div className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      {c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `${usd(c.discountValue)} OFF`}
+                      {c.discountType === 'free' ? 'GRATIS' : c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `${usd(c.discountValue)} OFF`}
                     </div>
                     
                     <div className="text-[11px] text-zinc-500 mb-3 space-y-0.5">
@@ -175,7 +175,7 @@ function toDateInput(iso: string | null): string {
 
 function CouponEditor({ coupon, plans, onClose, onSaved }: { coupon: AdminCouponRow | null; plans: PlanOpt[]; onClose: () => void; onSaved: () => void }) {
   const [code, setCode] = useState(coupon?.code ?? '');
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(coupon?.discountType ?? 'percentage');
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | 'free'>(coupon?.discountType ?? 'percentage');
   const [discountValue, setDiscountValue] = useState(String(coupon?.discountValue ?? 10));
   const [minPurchase, setMinPurchase] = useState(coupon?.minPurchase != null ? String(coupon.minPurchase) : '');
   const [expiresAt, setExpiresAt] = useState(toDateInput(coupon?.expiresAt ?? null));
@@ -231,17 +231,27 @@ function CouponEditor({ coupon, plans, onClose, onSaved }: { coupon: AdminCoupon
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Tipo">
-                <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed')}
+                <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'fixed' | 'free')}
                   className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]">
                   <option value="percentage">Porcentaje (%)</option>
                   <option value="fixed">Monto fijo (USD)</option>
+                  <option value="free">Gratis (eSIM sin cargo)</option>
                 </select>
               </Field>
-              <Field label={discountType === 'percentage' ? 'Porcentaje' : 'Monto (USD)'}>
-                <input type="number" min="0" step="0.01" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]" />
-              </Field>
+              {discountType !== 'free' && (
+                <Field label={discountType === 'percentage' ? 'Porcentaje' : 'Monto (USD)'}>
+                  <input type="number" min="0" step="0.01" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]" />
+                </Field>
+              )}
             </div>
+
+            {discountType === 'free' && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 p-3 text-[11px] text-amber-800 dark:text-amber-300">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>Cubre el <strong>100%</strong>: la eSIM se emite <strong>sin pasar por Stripe</strong>. Para evitar abuso, configurá límites abajo (1 uso por cuenta, tope global y/o vencimiento).</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Compra mínima (USD, opc.)">

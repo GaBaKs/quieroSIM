@@ -1,13 +1,18 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { createStripeGateway } from '../_shared/stripe/gateway.ts';
+import { startProvisionAndDeliver } from '../_shared/services/fulfillment.ts';
 
 /**
  * API de checkout (verify_jwt ON — exige anon JWT o sesión):
- *  POST /checkout/create  → orden 'pending' + PaymentIntent (precio desde BD).
+ *  POST /checkout/create  → orden 'pending' + PaymentIntent (precio desde BD), o
+ *                           camino pago-cero (cupón gratis / total cubierto) que
+ *                           NO pasa por Stripe y emite la eSIM directo.
  *  POST /checkout/status  → estado de la orden para el polling (orderId+email,
  *                           apto guests que no pueden leer por RLS).
  */
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -93,6 +98,7 @@ Deno.serve(async (req: Request) => {
     let couponId: string | null = null;
     let discountApplied = 0;
     let finalUsd = priceUsd;
+    let isFreeCoupon = false;
     if (couponCode && couponCode.trim()) {
       const { data: cv } = await supabase.rpc('validate_coupon', {
         p_code: couponCode,
@@ -101,13 +107,66 @@ Deno.serve(async (req: Request) => {
         p_user_id: userId,
         p_email: email.toLowerCase(),
       });
-      const v = cv as { valid?: boolean; coupon_id?: string; discount?: number; reason?: string } | null;
+      const v = cv as { valid?: boolean; coupon_id?: string; discount?: number; is_free?: boolean; reason?: string } | null;
       if (!v?.valid) {
         return fail('COUPON_INVALID', v?.reason ?? 'El cupón no es válido.', 400);
       }
       couponId = v.coupon_id ?? null;
       discountApplied = Number(v.discount ?? 0);
+      isFreeCoupon = v.is_free === true;
       finalUsd = Math.max(0, priceUsd - discountApplied);
+    }
+
+    // ── Camino pago-cero ──────────────────────────────────────────────────────
+    // Cupón 'free' o descuento que cubre el 100%: NO se cobra ni se crea
+    // PaymentIntent. Se crea la orden, se marca pagada y se emite la eSIM directo
+    // (mismo flujo que el webhook). Idempotencia: guard atómico + provision_job.
+    if (isFreeCoupon || finalUsd === 0) {
+      const { data: freeOrder, error: freeErr } = await supabase
+        .from('order')
+        .insert({
+          user_id: userId,
+          guest_email: email.toLowerCase(),
+          guest_phone: phone,
+          plan_id: plan.id,
+          price_paid: 0,
+          currency_sale: 'USD',
+          coupon_id: couponId,
+          discount_applied: priceUsd,
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          channel: 'web',
+          status: 'pending',
+          lang: orderLang,
+        })
+        .select('id')
+        .single();
+      if (freeErr || !freeOrder) return fail('INTERNAL', 'No pudimos crear la orden.', 500);
+
+      // Guard atómico pending→paid (sin cobro): solo UNA ejecución la logra.
+      const { data: paid } = await supabase
+        .from('order')
+        .update({ status: 'paid' })
+        .eq('id', freeOrder.id)
+        .eq('status', 'pending')
+        .select('id');
+      if (!paid || paid.length === 0) return fail('CONFLICT', 'La orden no se pudo confirmar.', 409);
+
+      if (couponId) {
+        const { error: redeemErr } = await supabase.rpc('redeem_coupon', { p_coupon_id: couponId, p_order_id: freeOrder.id });
+        if (redeemErr) console.error('redeem_coupon error', redeemErr.message);
+      }
+
+      await supabase.from('provision_job').upsert({ order_id: freeOrder.id }, { onConflict: 'order_id', ignoreDuplicates: true });
+
+      const provision = startProvisionAndDeliver(supabase, freeOrder.id);
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+        EdgeRuntime.waitUntil(provision);
+      } else {
+        await provision;
+      }
+
+      return json({ ok: true, data: { free: true, orderId: freeOrder.id } });
     }
     // Stripe exige un cobro mínimo (~US$0,50). Si el descuento baja de ese piso,
     // se cobra el mínimo (no se puede cobrar menos) y se ajusta el descuento real

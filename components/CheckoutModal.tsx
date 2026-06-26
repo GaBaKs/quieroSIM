@@ -52,7 +52,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [copied, setCopied] = useState(false);
   // Cupón (Etapa 8A)
   const [couponInput, setCouponInput] = useState('');
-  const [applied, setApplied] = useState<{ code: string; discount: number; finalPrice: number; minCharge: boolean } | null>(null);
+  const [applied, setApplied] = useState<{ code: string; discount: number; finalPrice: number; minCharge: boolean; isFree: boolean } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
@@ -168,7 +168,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     const result = await previewCoupon({ code, planId: plan.id });
     setCouponLoading(false);
     if (result.ok) {
-      setApplied({ code: code.toUpperCase(), discount: result.data.discount, finalPrice: result.data.finalPrice, minCharge: result.data.minChargeApplied });
+      setApplied({ code: code.toUpperCase(), discount: result.data.discount, finalPrice: result.data.finalPrice, minCharge: result.data.minChargeApplied, isFree: result.data.isFree });
     } else {
       setApplied(null);
       setCouponError(result.error.message);
@@ -208,6 +208,14 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       // El precio cambió: mostramos el aviso y NO avanzamos al pago. El cliente
       // confirma con el botón (doCheckout(true)) o cierra.
       setPriceChanged(result.data.newPriceUsd);
+      return;
+    }
+    if ('free' in result.data) {
+      // Cupón gratis / total cubierto: no hay pago. La eSIM ya se está emitiendo;
+      // saltamos el Payment Element y vamos directo al paso de emisión (polea estado).
+      setPriceChanged(null);
+      setSession({ orderId: result.data.orderId, clientSecret: '', amountUsd: 0 });
+      setStep('processing');
       return;
     }
     setPriceChanged(null);
@@ -300,9 +308,13 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                   {applied ? (
                     <>
                       <div className="text-[10px] sm:text-xs text-slate-400 line-through font-sans">${plan.priceUSD} USD</div>
-                      <div className="text-slate-900 font-sans font-bold text-base sm:text-xl">
-                        ${applied.finalPrice.toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
-                      </div>
+                      {applied.isFree ? (
+                        <div className="text-green-700 font-sans font-black text-base sm:text-xl uppercase">{t('checkout.free')}</div>
+                      ) : (
+                        <div className="text-slate-900 font-sans font-bold text-base sm:text-xl">
+                          ${applied.finalPrice.toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>

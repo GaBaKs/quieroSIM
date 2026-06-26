@@ -46,7 +46,13 @@ export interface PriceChanged {
   newPriceUsd: number;
 }
 
-export type CheckoutResult = CheckoutSession | PriceChanged;
+/** Orden gratis (cupón 'free' o total cubierto): no pasa por Stripe, ya se emite la eSIM. */
+export interface FreeOrder {
+  free: true;
+  orderId: string;
+}
+
+export type CheckoutResult = CheckoutSession | PriceChanged | FreeOrder;
 
 const previewCouponSchema = z.object({
   code: z.string().trim().min(1).max(40),
@@ -58,6 +64,8 @@ export interface CouponPreview {
   finalPrice: number;
   /** true si el descuento bajó del mínimo de Stripe (US$0,50) y se cobra el mínimo. */
   minChargeApplied: boolean;
+  /** true si el cupón es gratis / cubre el 100% → no pasa por Stripe. */
+  isFree: boolean;
 }
 
 /** Cobro mínimo de Stripe (USD). No se puede cobrar menos que esto. */
@@ -158,11 +166,13 @@ export async function previewCoupon(input: { code: string; planId: string }): Pr
     logger.error('previewCoupon falló', { error: error.message });
     return err(ErrorCodes.INTERNAL, 'No pudimos validar el cupón. Intentá de nuevo.');
   }
-  const v = data as { valid?: boolean; discount?: number; reason?: string } | null;
+  const v = data as { valid?: boolean; discount?: number; is_free?: boolean; reason?: string } | null;
   if (!v?.valid) return err('COUPON_INVALID', v?.reason ?? 'El cupón no es válido.');
 
   const discount = Number(v.discount ?? 0);
   const raw = Math.max(0, subtotal - discount);
-  const finalPrice = raw < MIN_CHARGE_USD ? MIN_CHARGE_USD : raw;
-  return ok({ discount, finalPrice, minChargeApplied: raw < MIN_CHARGE_USD });
+  const isFree = v.is_free === true || raw === 0;
+  // Gratis → finalPrice 0 (no pasa por Stripe). Si no, aplica el piso de Stripe.
+  const finalPrice = isFree ? 0 : raw < MIN_CHARGE_USD ? MIN_CHARGE_USD : raw;
+  return ok({ discount, finalPrice, minChargeApplied: !isFree && raw < MIN_CHARGE_USD, isFree });
 }

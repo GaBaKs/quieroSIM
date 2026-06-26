@@ -47,6 +47,7 @@
     "supabase/functions/yesim-webhook",
     "supabase/functions/admin-health",
     "supabase/functions/whatsapp-send",
-    "supabase/functions/admin-users"
+    "supabase/functions/admin-users",
+    "supabase/functions/_shared/services/fulfillment.ts"
   ]
 }

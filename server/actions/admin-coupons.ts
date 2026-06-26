@@ -18,7 +18,7 @@ import { requireAdmin } from '../lib/admin-guard';
 export interface AdminCouponRow {
   id: string;
   code: string;
-  discountType: 'percentage' | 'fixed';
+  discountType: 'percentage' | 'fixed' | 'free';
   discountValue: number;
   minPurchase: number | null;
   applicablePlanIds: string[];
@@ -60,7 +60,7 @@ export async function getCoupons(): Promise<Result<AdminCouponRow[]>> {
     return {
       id: c.id,
       code: c.code,
-      discountType: (c.discount_type ?? 'percentage') as 'percentage' | 'fixed',
+      discountType: (c.discount_type ?? 'percentage') as 'percentage' | 'fixed' | 'free',
       discountValue: Number(c.discount_value),
       minPurchase: c.min_purchase_amount === null ? null : Number(c.min_purchase_amount),
       applicablePlanIds: planIds,
@@ -80,8 +80,9 @@ export async function getCoupons(): Promise<Result<AdminCouponRow[]>> {
 
 const couponBase = z.object({
   code: z.string().trim().min(3).max(40).regex(/^[A-Za-z0-9_-]+$/, 'Solo letras, números, guiones.'),
-  discountType: z.enum(['percentage', 'fixed']),
-  discountValue: z.number().positive().max(100000),
+  // 'free' = cubre el 100% y NO pasa por Stripe (el checkout emite la eSIM directo).
+  discountType: z.enum(['percentage', 'fixed', 'free']),
+  discountValue: z.number().min(0).max(100000).default(0),
   minPurchase: z.number().min(0).max(100000).nullable().optional(),
   applicablePlanIds: z.array(z.string().uuid()).max(200).optional(),
   startsAt: z.string().datetime().nullable().optional(),
@@ -92,13 +93,16 @@ const couponBase = z.object({
   maxUsesGlobal: z.number().int().positive().max(1000000).nullable().optional(),
 });
 
-/** % nunca > 100. Reutilizable para crear y editar. */
+/** % nunca > 100; el valor solo es obligatorio para % y fijo (free lo ignora). */
+const valueOk = (d: { discountType: string; discountValue: number }) =>
+  d.discountType === 'free' || d.discountValue > 0;
+const valueMsg = { message: 'El descuento debe ser mayor a 0.', path: ['discountValue'] };
 const percentageOk = (d: { discountType: string; discountValue: number }) =>
   d.discountType !== 'percentage' || d.discountValue <= 100;
 const percentageMsg = { message: 'El descuento por porcentaje no puede superar 100%.', path: ['discountValue'] };
 
-const couponSchema = couponBase.refine(percentageOk, percentageMsg);
-const couponUpdateSchema = couponBase.extend({ id: z.string().uuid() }).refine(percentageOk, percentageMsg);
+const couponSchema = couponBase.refine(valueOk, valueMsg).refine(percentageOk, percentageMsg);
+const couponUpdateSchema = couponBase.extend({ id: z.string().uuid() }).refine(valueOk, valueMsg).refine(percentageOk, percentageMsg);
 
 export type CouponInput = z.input<typeof couponSchema>;
 
@@ -106,7 +110,7 @@ function toRow(d: z.infer<typeof couponSchema>) {
   return {
     code: d.code.toUpperCase(),
     discount_type: d.discountType,
-    discount_value: d.discountValue,
+    discount_value: d.discountType === 'free' ? 0 : d.discountValue,
     min_purchase_amount: d.minPurchase ?? null,
     applicable_plan_ids: d.applicablePlanIds && d.applicablePlanIds.length > 0 ? d.applicablePlanIds : null,
     starts_at: d.startsAt ?? null,

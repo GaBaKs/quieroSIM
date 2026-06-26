@@ -1,19 +1,14 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { createStripeGateway } from '../_shared/stripe/gateway.ts';
-import { createYesimClient } from '../_shared/yesim/client.ts';
-import { createYesimMock } from '../_shared/yesim/mock/handler.ts';
 import { runProvision } from '../_shared/services/provisioning.ts';
 import { createSupabaseProvisionStore } from '../_shared/services/provision-store-supabase.ts';
-import { createResendClient } from '../_shared/email/resend.ts';
-import { sendQrDelivery } from '../_shared/services/delivery.ts';
-import { createSupabaseDeliveryStore } from '../_shared/services/delivery-store-supabase.ts';
-import { createTwilioClient } from '../_shared/whatsapp/twilio.ts';
-import { sendWhatsappDelivery } from '../_shared/services/whatsapp-delivery.ts';
 import {
-  createSupabaseQrHosting,
-  createSupabaseWhatsappStore,
-} from '../_shared/services/whatsapp-delivery-store-supabase.ts';
+  makeYesim,
+  deliverQrForOrder,
+  deliverQrWhatsappForOrder,
+  startProvisionAndDeliver,
+} from '../_shared/services/fulfillment.ts';
 
 /**
  * Webhook de Stripe + reintento manual de provisión.
@@ -30,74 +25,6 @@ declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | unde
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-}
-
-function makeYesim() {
-  const baseUrl = Deno.env.get('YESIM_BASE_URL') ?? 'mock';
-  const token = Deno.env.get('YESIM_TOKEN') ?? 'mock-token';
-  const useMock = baseUrl === 'mock';
-  return createYesimClient({
-    baseUrl: useMock ? 'https://yesim.mock' : baseUrl,
-    token,
-    fetchFn: useMock ? createYesimMock({ token }).fetchHandler : undefined,
-  });
-}
-
-/**
- * Etapa 6: si la provisión terminó fulfilled, dispara el email con el QR.
- * Sin RESEND_API_KEY la entrega queda failed=RESEND_NOT_CONFIGURED y el cron
- * process-qr-deliveries la levanta cuando la key esté configurada.
- */
-// deno-lint-ignore no-explicit-any
-async function deliverQrForOrder(supabase: any, orderId: string): Promise<void> {
-  try {
-    const { data: esim } = await supabase.from('esim').select('id').eq('order_id', orderId).maybeSingle();
-    if (!esim) return;
-    const apiKey = Deno.env.get('RESEND_API_KEY');
-    await sendQrDelivery(esim.id, {
-      store: createSupabaseDeliveryStore(supabase),
-      email: apiKey
-        ? createResendClient({ apiKey, from: Deno.env.get('EMAIL_FROM') ?? 'QuieroSIM <onboarding@resend.dev>' })
-        : null,
-    });
-  } catch (e) {
-    // Jamás loguear el contenido del email (lleva el LPA); solo el motivo.
-    console.error('qr delivery error', e instanceof Error ? e.message : String(e));
-  }
-}
-
-/**
- * Segundo canal: si la orden tiene guest_phone, dispara el QR por WhatsApp
- * (Twilio). Solo se intenta cuando hay teléfono Y eSIM; sin secrets de Twilio el
- * transporte es null y la entrega queda failed para que el cron la levante. No
- * bloquea ni afecta al canal email ni a la emisión.
- */
-// deno-lint-ignore no-explicit-any
-async function deliverQrWhatsappForOrder(supabase: any, orderId: string): Promise<void> {
-  try {
-    const { data: order } = await supabase
-      .from('order')
-      .select('guest_phone, esim(id)')
-      .eq('id', orderId)
-      .maybeSingle();
-    const phone = (order?.guest_phone ?? '').trim();
-    const esim = Array.isArray(order?.esim) ? order?.esim[0] : order?.esim;
-    if (!phone || !esim) return; // sin teléfono o sin eSIM: no hay canal WhatsApp
-    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-    const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-    const from = Deno.env.get('TWILIO_WHATSAPP_FROM');
-    await sendWhatsappDelivery(esim.id, {
-      store: createSupabaseWhatsappStore(supabase),
-      media: createSupabaseQrHosting(supabase),
-      whatsapp:
-        accountSid && authToken && from
-          ? createTwilioClient({ accountSid, authToken, from })
-          : null,
-    });
-  } catch (e) {
-    // Jamás loguear el body/LPA/URL firmada; solo el motivo.
-    console.error('whatsapp delivery error', e instanceof Error ? e.message : String(e));
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -275,18 +202,7 @@ Deno.serve(async (req: Request) => {
           .upsert({ order_id: orderId }, { onConflict: 'order_id', ignoreDuplicates: true });
 
         // Responder rápido a Stripe; la emisión sigue en background.
-        const provision = runProvision(orderId, {
-          store: createSupabaseProvisionStore(supabase),
-          yesim: makeYesim(),
-        })
-          .then(async (r) => {
-            if (r.ok && r.data.state === 'fulfilled') {
-              await deliverQrForOrder(supabase, orderId);
-              await deliverQrWhatsappForOrder(supabase, orderId);
-            }
-          })
-          .catch((e) => console.error('provision error', e instanceof Error ? e.message : String(e)));
-
+        const provision = startProvisionAndDeliver(supabase, orderId);
         if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
           EdgeRuntime.waitUntil(provision);
         } else {
