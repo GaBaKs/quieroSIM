@@ -24,6 +24,8 @@ const createCheckoutSchema = z.object({
   lang: z.enum(['ES', 'EN', 'PT']).default('ES'),
   /** Código de cupón opcional (se valida de nuevo server-side). */
   couponCode: z.string().trim().max(40).optional(),
+  /** El comprador (afiliado) quiere pagar con su crédito de plataforma. */
+  useCredit: z.boolean().optional(),
   /**
    * Precio (base, en USD) que el cliente vio al abrir el checkout. El server lo
    * compara con el precio actual de la BD; si difiere (el admin lo cambió en el

@@ -12,6 +12,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { QRCodeSVG } from 'qrcode.react';
 import { createCheckout, getOrderStatus, previewCoupon, type CheckoutSession, type OrderStatusInfo } from '@/server/actions/checkout';
+import { getMyCreditBalance } from '@/server/actions/affiliates';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { checkoutLock } from '@/lib/checkout-lock';
 
@@ -56,6 +57,9 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
+  // Crédito de afiliado del comprador (A6.1): si tiene, puede pagar con él.
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [useCredit, setUseCredit] = useState(false);
   const pollCount = useRef(0);
 
   // ¿El comprador NO tiene sesión? Si tiene cuenta, conviene loguearse para que
@@ -65,8 +69,15 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     let active = true;
     createSupabaseBrowserClient()
       .auth.getUser()
-      .then(({ data }) => {
-        if (active) setIsGuest(!data.user);
+      .then(async ({ data }) => {
+        if (!active) return;
+        setIsGuest(!data.user);
+        if (data.user) {
+          const c = await getMyCreditBalance();
+          if (active) setCreditBalance(c);
+        } else {
+          setCreditBalance(0);
+        }
       });
     return () => {
       active = false;
@@ -99,6 +110,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
         setApplied(null);
         setCouponError(null);
         setCouponLoading(false);
+        setUseCredit(false);
         pollCount.current = 0;
       });
     }
@@ -195,6 +207,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       acceptTerms: true,
       lang, // idioma del email con el QR
       couponCode: applied?.code, // cupón aplicado (se revalida server-side)
+      useCredit: useCredit && creditBalance > 0, // pagar con crédito de afiliado (A6.1)
       // Precio que vio el cliente (control anti cambio en el medio). Al reconfirmar
       // se omite para aceptar el precio actual.
       expectedPriceUsd: acceptNewPrice ? undefined : plan.priceUSD,
@@ -367,6 +380,16 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                 )}
                 {couponError && <p className="text-red-500 text-[10px] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {couponError}</p>}
               </div>
+
+              {/* Crédito de afiliado (A6.1): pagar con el saldo de plataforma */}
+              {creditBalance > 0 && (
+                <label className="flex items-center justify-between gap-2 rounded-xl border border-[var(--color-violet)]/20 bg-[var(--color-violet)]/[0.04] px-3 py-2.5 cursor-pointer select-none">
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-700">
+                    {t('checkout.useCredit').replace('{amount}', creditBalance.toFixed(2))}
+                  </span>
+                  <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="h-4 w-4 rounded accent-[var(--color-violet)]" />
+                </label>
+              )}
 
               <div className="space-y-3">
                 <h4 className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('checkout.deliveryInfo')}</h4>

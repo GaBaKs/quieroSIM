@@ -103,6 +103,18 @@ export async function requestWithdrawal(input: { amount: number }): Promise<Resu
   return ok(null);
 }
 
+/** Crédito de plataforma gastable del comprador logueado (0 si no tiene/no es afiliado). */
+export async function getMyCreditBalance(): Promise<number> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { data } = await supabase.rpc('affiliate_my_balance' as never);
+  const b = (data ?? {}) as { credit?: number };
+  return Math.max(0, Number(b.credit ?? 0));
+}
+
 const registerSchema = z.object({
   channel: z.string().trim().max(120).optional(),
   estimatedAudience: z.number().int().min(0).max(1_000_000_000).optional(),

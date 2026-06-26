@@ -161,7 +161,7 @@ Deno.serve(async (req: Request) => {
         .update({ status: 'paid' })
         .eq('id', orderId)
         .eq('status', 'pending')
-        .select('id, plan_id, coupon_id');
+        .select('id, plan_id, coupon_id, user_id, affiliate_credit_applied');
 
       if (updated && updated.length > 0) {
         // Candado de catálogo: si el plan se DESACTIVÓ entre la creación del PI
@@ -195,6 +195,18 @@ Deno.serve(async (req: Request) => {
             p_order_id: orderId,
           });
           if (redeemErr) console.error('redeem_coupon error', redeemErr.message);
+        }
+
+        // A6.1: crédito de afiliado aplicado al pago → asiento 'spent' (1 por orden).
+        const creditApplied = Number(updated[0].affiliate_credit_applied ?? 0);
+        if (creditApplied > 0 && updated[0].user_id) {
+          const { data: ba } = await supabase.from('affiliate_profile').select('id').eq('user_id', updated[0].user_id).maybeSingle();
+          if (ba) {
+            const { data: exists } = await supabase.from('affiliate_credit').select('id').eq('order_id', orderId).eq('movement_type', 'spent').maybeSingle();
+            if (!exists) {
+              await supabase.from('affiliate_credit').insert({ affiliate_profile_id: ba.id, movement_type: 'spent', amount: creditApplied, order_id: orderId });
+            }
+          }
         }
 
         await supabase
