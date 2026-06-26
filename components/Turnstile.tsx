@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 /**
  * Widget de Cloudflare Turnstile (CAPTCHA, Fase 12). Renderiza el desafío y
@@ -24,9 +24,31 @@ declare global {
 const SCRIPT_ID = 'cf-turnstile-script';
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
-export default function Turnstile({ onToken }: { onToken: (token: string) => void }) {
+export interface TurnstileHandle {
+  /** Reinicia el widget y descarta el token actual. Los tokens de Turnstile son
+   *  de un solo uso: tras un intento fallido hay que resetear para obtener uno nuevo. */
+  reset: () => void;
+}
+
+const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void }>(function Turnstile(
+  { onToken },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.reset(widgetIdRef.current);
+        } catch {
+          /* noop */
+        }
+      }
+      onToken('');
+    },
+  }));
 
   useEffect(() => {
     const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -77,4 +99,6 @@ export default function Turnstile({ onToken }: { onToken: (token: string) => voi
   }, [onToken]);
 
   return <div ref={containerRef} className="flex justify-center" />;
-}
+});
+
+export default Turnstile;

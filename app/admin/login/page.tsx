@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
@@ -9,7 +9,7 @@ import { Lock } from 'lucide-react';
 import { useTheme } from '@/components/admin/ThemeProvider';
 import { useMounted } from '@/hooks/use-mounted';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import Turnstile from '@/components/Turnstile';
+import Turnstile, { type TurnstileHandle } from '@/components/Turnstile';
 
 function LoginForm() {
   const router = useRouter();
@@ -20,6 +20,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'forbidden'
@@ -39,6 +40,7 @@ function LoginForm() {
     });
     if (signInError) {
       setSubmitting(false);
+      turnstileRef.current?.reset();
       setError(
         signInError.message === 'Email not confirmed'
           ? 'Tu email todavía no está confirmado. Revisá tu casilla.'
@@ -100,7 +102,7 @@ function LoginForm() {
             </p>
           )}
 
-          <Turnstile onToken={setCaptchaToken} />
+          <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
 
           <div className="pt-6">
             <QuieroButton
