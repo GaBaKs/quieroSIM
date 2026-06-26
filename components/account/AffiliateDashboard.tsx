@@ -154,6 +154,11 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
   const [terms, setTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // ¿Llegó por el link de otro afiliado? (cookie qs_aff, legible desde el cliente)
+  const [referred, setReferred] = useState(false);
+  useEffect(() => {
+    setReferred(/(^|;\s*)qs_aff=/.test(document.cookie));
+  }, []);
 
   const submit = async () => {
     if (!terms) {
@@ -178,6 +183,11 @@ function RegisterForm({ onDone }: { onDone: () => void }) {
         <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Sumate al programa de afiliados</h3>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Ganá comisión por cada venta con tu link o cupón. Te acreditamos al instante.</p>
       </div>
+      {referred && (
+        <div className="rounded-xl border border-[#9933c1]/20 bg-[#9933c1]/[0.05] px-3 py-2 text-[12px] text-[#7100a5] dark:text-[#b3ff6b]">
+          🎟️ Te invitó un afiliado. Cuando te aprobemos, esa persona también gana comisión por tus ventas (nivel 2).
+        </div>
+      )}
       <div>
         <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Canal (opcional)</label>
         <input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="Instagram @tucuenta, YouTube, agencia…"

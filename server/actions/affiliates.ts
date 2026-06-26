@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 import { err, ok, type Result } from '../types/result';
 import { ErrorCodes } from '../lib/errors';
 import { parseInput } from '../lib/validation';
@@ -136,9 +137,15 @@ export async function registerAffiliate(input: {
   } = await supabase.auth.getUser();
   if (!user) return err(ErrorCodes.UNAUTHORIZED, 'Iniciá sesión para registrarte como afiliado.');
 
+  // Multinivel: si el usuario llegó por el link de otro afiliado (cookie qs_aff),
+  // queda como su referido (L2). El RPC valida que el referidor esté aprobado.
+  const aff = (await cookies()).get('qs_aff')?.value;
+  const referrerRef = aff && /^[A-Za-z0-9_-]{1,64}$/.test(aff) ? aff : null;
+
   const { data, error } = await supabase.rpc('register_affiliate' as never, {
     p_channel: parsed.data.channel ?? null,
     p_audience: parsed.data.estimatedAudience ?? null,
+    p_referrer_ref: referrerRef,
   } as never);
   if (error) {
     logger.error('registerAffiliate falló', { error: error.message });
