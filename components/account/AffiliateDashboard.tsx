@@ -46,7 +46,10 @@ export default function AffiliateDashboard({ affiliate }: { affiliate: MyAffilia
 function ApprovedDashboard({ affiliate, onChanged }: { affiliate: MyAffiliate; onChanged: () => void }) {
   const b = affiliate.balance;
   const [copied, setCopied] = useState<string | null>(null);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  // El origin solo existe en el cliente. Lo seteamos tras montar para que el
+  // primer render del cliente coincida con el del server (evita hydration mismatch).
+  const [origin, setOrigin] = useState('');
+  useEffect(() => setOrigin(window.location.origin), []);
   const refUrl = affiliate.referralLink ? `${origin}/?aff=${affiliate.referralLink}` : '';
 
   const copy = async (text: string, key: string) => {
@@ -64,7 +67,7 @@ function ApprovedDashboard({ affiliate, onChanged }: { affiliate: MyAffiliate; o
       {/* Balance */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat icon={<Wallet className="h-4 w-4" />} label="Disponible" value={usd(b.available)} accent />
-        <Stat icon={<Clock className="h-4 w-4" />} label="Pendiente" value={usd(b.pending)} />
+        <Stat icon={<Clock className="h-4 w-4" />} label="Retiro en proceso" value={usd(b.withdrawnPending)} />
         <Stat icon={<Ticket className="h-4 w-4" />} label="Crédito" value={usd(b.credit)} />
         <Stat icon={<CheckCircle2 className="h-4 w-4" />} label="Retirado" value={usd(b.withdrawn)} />
       </div>

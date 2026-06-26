@@ -16,7 +16,10 @@ import { createSupabaseServerClient } from '../db/supabase-server';
 
 export interface AffiliateBalance {
   available: number;
+  /** Comisiones en estado pending (hoy no se generan; reservado). */
   pending: number;
+  /** Retiros solicitados aún no pagados (status pending/approved). */
+  withdrawnPending: number;
   withdrawn: number;
   converted: number;
   credit: number;
@@ -53,7 +56,7 @@ export async function getMyAffiliate(): Promise<Result<MyAffiliate | null>> {
 
   // Balance derivado (RPC SECURITY DEFINER, restringido al afiliado del usuario).
   const { data: bal } = await supabase.rpc('affiliate_my_balance' as never);
-  const b = (bal ?? {}) as { available?: number; pending?: number; withdrawn?: number; converted?: number; credit?: number };
+  const b = (bal ?? {}) as { available?: number; pending?: number; withdrawnPending?: number; withdrawn?: number; converted?: number; credit?: number };
 
   return ok({
     id: prof.id,
@@ -65,6 +68,7 @@ export async function getMyAffiliate(): Promise<Result<MyAffiliate | null>> {
     balance: {
       available: Number(b.available ?? 0),
       pending: Number(b.pending ?? 0),
+      withdrawnPending: Number(b.withdrawnPending ?? 0),
       withdrawn: Number(b.withdrawn ?? 0),
       converted: Number(b.converted ?? 0),
       credit: Number(b.credit ?? 0),
