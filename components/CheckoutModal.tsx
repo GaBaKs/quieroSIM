@@ -32,6 +32,22 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 type Step = 'form' | 'payment' | 'processing' | 'success';
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const MIN_CHARGE_USD = 0.5;
+
+/**
+ * Espejo cliente de la regla A6.1 (la fuente de verdad es la Edge). Dado el precio,
+ * el saldo y el monto pedido, devuelve cuánto crédito se aplica y cuánto va a Stripe,
+ * garantizando que el cargo de tarjeta sea $0 o ≥$0.50 (nunca la zona muerta).
+ */
+function creditPreview(price: number, balance: number, requested: number) {
+  let toApply = Math.min(Math.max(0, requested), balance, price);
+  const rem = round2(price - toApply);
+  if (rem > 0 && rem < MIN_CHARGE_USD) toApply = toApply >= price ? price : round2(price - MIN_CHARGE_USD);
+  toApply = round2(Math.max(0, toApply));
+  return { credit: toApply, card: round2(price - toApply) };
+}
+
 const POLL_INTERVAL_MS = 2500;
 const POLL_MAX_ATTEMPTS = 24; // ~60s; después mostramos "puede demorar" (§5.4, sin tono de error)
 
@@ -60,6 +76,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   // Crédito de afiliado del comprador (A6.1): si tiene, puede pagar con él.
   const [creditBalance, setCreditBalance] = useState(0);
   const [useCredit, setUseCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState(''); // cuánto crédito aplicar (USD)
   const pollCount = useRef(0);
 
   // ¿El comprador NO tiene sesión? Si tiene cuenta, conviene loguearse para que
@@ -207,7 +224,9 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       acceptTerms: true,
       lang, // idioma del email con el QR
       couponCode: applied?.code, // cupón aplicado (se revalida server-side)
-      useCredit: useCredit && creditBalance > 0, // pagar con crédito de afiliado (A6.1)
+      // Crédito de afiliado (A6.1): mandamos el monto elegido. El server lo acota.
+      useCredit: useCredit && creditBalance > 0 && Number(creditAmount) > 0,
+      creditToApply: useCredit && creditBalance > 0 && Number(creditAmount) > 0 ? round2(Number(creditAmount)) : undefined,
       // Precio que vio el cliente (control anti cambio en el medio). Al reconfirmar
       // se omite para aceptar el precio actual.
       expectedPriceUsd: acceptNewPrice ? undefined : plan.priceUSD,
@@ -381,15 +400,48 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                 {couponError && <p className="text-red-500 text-[10px] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {couponError}</p>}
               </div>
 
-              {/* Crédito de afiliado (A6.1): pagar con el saldo de plataforma */}
-              {creditBalance > 0 && (
-                <label className="flex items-center justify-between gap-2 rounded-xl border border-[var(--color-violet)]/20 bg-[var(--color-violet)]/[0.04] px-3 py-2.5 cursor-pointer select-none">
-                  <span className="text-[11px] sm:text-xs font-bold text-slate-700">
-                    {t('checkout.useCredit').replace('{amount}', creditBalance.toFixed(2))}
-                  </span>
-                  <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="h-4 w-4 rounded accent-[var(--color-violet)]" />
-                </label>
-              )}
+              {/* Crédito de afiliado (A6.1): elegir cuánto del saldo aplicar */}
+              {creditBalance > 0 && !applied?.isFree && (() => {
+                const effectivePrice = applied ? applied.finalPrice : plan.priceUSD;
+                const maxCredit = round2(Math.min(creditBalance, effectivePrice));
+                const pv = creditPreview(effectivePrice, creditBalance, Number(creditAmount) || 0);
+                return (
+                  <div className="rounded-xl border border-[var(--color-violet)]/20 bg-[var(--color-violet)]/[0.04] px-3 py-2.5 space-y-2">
+                    <label className="flex items-center justify-between gap-2 cursor-pointer select-none">
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-700">
+                        {t('checkout.useCredit').replace('{amount}', creditBalance.toFixed(2))}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={useCredit}
+                        onChange={(e) => { setUseCredit(e.target.checked); setCreditAmount(e.target.checked ? maxCredit.toFixed(2) : ''); }}
+                        className="h-4 w-4 rounded accent-[var(--color-violet)]"
+                      />
+                    </label>
+                    {useCredit && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500">US$</span>
+                          <input
+                            type="number" min="0" step="0.01" max={maxCredit}
+                            value={creditAmount}
+                            onChange={(e) => setCreditAmount(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/20"
+                          />
+                          <button type="button" onClick={() => setCreditAmount(maxCredit.toFixed(2))} className="text-[11px] font-bold text-[var(--color-violet)] cursor-pointer">
+                            {t('checkout.creditMax')}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {pv.card === 0
+                            ? t('checkout.creditCoversAll').replace('{credit}', pv.credit.toFixed(2))
+                            : t('checkout.creditSplit').replace('{credit}', pv.credit.toFixed(2)).replace('{card}', pv.card.toFixed(2))}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="space-y-3">
                 <h4 className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('checkout.deliveryInfo')}</h4>

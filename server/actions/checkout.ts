@@ -24,8 +24,14 @@ const createCheckoutSchema = z.object({
   lang: z.enum(['ES', 'EN', 'PT']).default('ES'),
   /** Código de cupón opcional (se valida de nuevo server-side). */
   couponCode: z.string().trim().max(40).optional(),
-  /** El comprador (afiliado) quiere pagar con su crédito de plataforma. */
+  /** El comprador (afiliado) quiere pagar con su crédito de plataforma (aplica el máximo). */
   useCredit: z.boolean().optional(),
+  /**
+   * Monto de crédito a aplicar (USD). Si se envía, el server aplica ESE monto
+   * (acotado a [0, saldo, total]) en vez del máximo. La regla A6.1 igual manda:
+   * el remanente a Stripe nunca cae en (0, 0.50).
+   */
+  creditToApply: z.number().nonnegative().optional(),
   /**
    * Precio (base, en USD) que el cliente vio al abrir el checkout. El server lo
    * compara con el precio actual de la BD; si difiere (el admin lo cambió en el

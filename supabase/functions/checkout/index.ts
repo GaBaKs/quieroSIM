@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
       return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento y probá de nuevo.', 429);
     }
 
-    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd, affiliateRef, useCredit } = body as {
-      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number; affiliateRef?: string; useCredit?: boolean;
+    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd, affiliateRef, useCredit, creditToApply } = body as {
+      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number; affiliateRef?: string; useCredit?: boolean; creditToApply?: number;
     };
     // Idioma del comprador: define el idioma del email con el QR (Etapa 6).
     const orderLang = lang && ['ES', 'EN', 'PT'].includes(lang) ? lang : 'ES';
@@ -142,7 +142,10 @@ Deno.serve(async (req: Request) => {
     // Regla del mínimo de Stripe: el remanente a cobrar nunca cae en (0, 0.50) —
     // o $0 (sin Stripe) o ≥$0.50. El server recalcula SIEMPRE (no confía en el front).
     let creditApplied = 0;
-    if (useCredit === true && userId && finalUsd > 0) {
+    // El comprador quiere usar crédito si manda useCredit=true (máximo) o un
+    // creditToApply > 0 (monto elegido). El server decide el monto real.
+    const wantsCredit = useCredit === true || (typeof creditToApply === 'number' && creditToApply > 0);
+    if (wantsCredit && userId && finalUsd > 0) {
       const { data: buyerAff } = await supabase.from('affiliate_profile').select('id').eq('user_id', userId).maybeSingle();
       if (buyerAff) {
         const { data: creditRows } = await supabase.from('affiliate_credit').select('movement_type, amount').eq('affiliate_profile_id', buyerAff.id);
@@ -152,11 +155,16 @@ Deno.serve(async (req: Request) => {
           0,
         );
         if (creditBalance > 0) {
-          let toApply = Math.min(creditBalance, finalUsd);
+          // Monto deseado: el elegido por el comprador (acotado), o el máximo si no especificó.
+          const requested = typeof creditToApply === 'number' && creditToApply > 0
+            ? Math.min(creditToApply, creditBalance, finalUsd)
+            : Math.min(creditBalance, finalUsd);
+          let toApply = Math.round(requested * 100) / 100;
           const remainder = Math.round((finalUsd - toApply) * 100) / 100;
           if (remainder > 0 && remainder < MIN_CHARGE_USD) {
-            // Zona muerta: o el crédito cubre todo, o se deja exactamente $0.50 a Stripe.
-            toApply = creditBalance >= finalUsd ? finalUsd : Math.round((finalUsd - MIN_CHARGE_USD) * 100) / 100;
+            // Zona muerta (A6.1): o el crédito cubre todo (si el monto pedido alcanzaba),
+            // o se deja exactamente $0.50 a Stripe. Nunca un PaymentIntent de centavos.
+            toApply = toApply >= finalUsd ? finalUsd : Math.round((finalUsd - MIN_CHARGE_USD) * 100) / 100;
           }
           creditApplied = Math.round(toApply * 100) / 100;
           finalUsd = Math.round((finalUsd - creditApplied) * 100) / 100;
