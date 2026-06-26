@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Check, Pause, Play, X, Copy, Link2, Ticket } from 'lucide-react';
-import { setAffiliateStatus, type AdminAffiliateRow } from '@/server/actions/admin-affiliates';
+import { Search, Check, Pause, Play, X, Link2, Ticket, Users, DollarSign, Banknote, Loader2 } from 'lucide-react';
+import { setAffiliateStatus, markWithdrawalPaid, type AdminAffiliateRow, type PendingWithdrawal } from '@/server/actions/admin-affiliates';
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
@@ -14,17 +14,34 @@ const STATUS: Record<AdminAffiliateRow['status'], { label: string; cls: string }
   rejected: { label: 'Rechazado', cls: 'bg-red-50 text-red-600 dark:bg-red-400/15 dark:text-red-300' },
 };
 
-export default function AffiliatesView({ affiliates }: { affiliates: AdminAffiliateRow[] }) {
+export default function AffiliatesView({ affiliates, withdrawals }: { affiliates: AdminAffiliateRow[]; withdrawals: PendingWithdrawal[] }) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<'all' | AdminAffiliateRow['status']>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
+  // Resumen (reporte rápido) derivado del listado.
+  const activeCount = affiliates.filter((a) => a.status === 'approved').length;
+  const pendingApproval = affiliates.filter((a) => a.status === 'pending').length;
+  const totalCommissionDue = affiliates.reduce((s, a) => s + a.pendingCommission, 0);
+  const totalSales = affiliates.reduce((s, a) => s + a.sales, 0);
+
+  const [payingId, setPayingId] = useState<string | null>(null);
+
   const act = async (affiliateId: string, status: AdminAffiliateRow['status']) => {
     setBusyId(affiliateId);
     const res = await setAffiliateStatus({ affiliateId, status });
     setBusyId(null);
+    if (res.ok) router.refresh();
+    else alert(res.error.message);
+  };
+
+  const pay = async (id: string) => {
+    if (!confirm('¿Confirmás que ya pagaste este retiro por fuera (transferencia/Wise/etc.)?')) return;
+    setPayingId(id);
+    const res = await markWithdrawalPaid({ withdrawalId: id });
+    setPayingId(null);
     if (res.ok) router.refresh();
     else alert(res.error.message);
   };
@@ -52,6 +69,39 @@ export default function AffiliatesView({ affiliates }: { affiliates: AdminAffili
 
   return (
     <div className="space-y-4">
+      {/* Resumen */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Summary icon={<Users className="h-4 w-4" />} label="Activos" value={String(activeCount)} sub={pendingApproval ? `${pendingApproval} por aprobar` : undefined} />
+        <Summary icon={<DollarSign className="h-4 w-4" />} label="Comisión por pagar" value={usd(totalCommissionDue)} />
+        <Summary icon={<Banknote className="h-4 w-4" />} label="Retiros pendientes" value={String(withdrawals.length)} accent={withdrawals.length > 0} />
+        <Summary icon={<Ticket className="h-4 w-4" />} label="Ventas referidas" value={String(totalSales)} />
+      </div>
+
+      {/* Retiros pendientes de pago */}
+      {withdrawals.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-400/20 bg-amber-50/60 dark:bg-amber-400/[0.06] p-4">
+          <h3 className="font-bold text-sm text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-1.5">
+            <Banknote className="h-4 w-4" /> Retiros para pagar (por fuera)
+          </h3>
+          <div className="space-y-1.5">
+            {withdrawals.map((w) => (
+              <div key={w.id} className="flex items-center justify-between gap-3 rounded-xl bg-white dark:bg-zinc-900 border border-amber-100 dark:border-white/10 px-3 py-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-zinc-900 dark:text-white truncate">{w.affiliateName} <span className="font-normal text-zinc-400">· {w.affiliateEmail}</span></div>
+                  <div className="text-[11px] text-zinc-400">{w.requestedAt ? new Date(w.requestedAt).toLocaleDateString() : ''}</div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-sm font-black text-zinc-900 dark:text-white">{usd(w.amount)}</span>
+                  <button onClick={() => pay(w.id)} disabled={payingId === w.id} className="inline-flex items-center gap-1 rounded-lg bg-[#9933c1] hover:bg-[#7100a5] text-white px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 cursor-pointer">
+                    {payingId === w.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Marcar pagado
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
@@ -145,6 +195,16 @@ export default function AffiliatesView({ affiliates }: { affiliates: AdminAffili
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Summary({ icon, label, value, sub, accent }: { icon: React.ReactNode; label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${accent ? 'border-amber-300 bg-amber-50 dark:bg-amber-400/10 dark:border-amber-400/30' : 'border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900'}`}>
+      <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-zinc-400">{icon} {label}</div>
+      <div className="text-2xl font-black text-zinc-900 dark:text-white mt-1">{value}</div>
+      {sub ? <div className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">{sub}</div> : null}
     </div>
   );
 }
