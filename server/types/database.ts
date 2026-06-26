@@ -1059,6 +1059,7 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          affiliate_coupon_discount_pct: number
           commission_l1_pct: number | null
           commission_l2_pct: number | null
           default_margin_pct: number | null
@@ -1071,6 +1072,7 @@ export type Database = {
           wholesale_margin_pct: number | null
         }
         Insert: {
+          affiliate_coupon_discount_pct?: number
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
@@ -1083,6 +1085,7 @@ export type Database = {
           wholesale_margin_pct?: number | null
         }
         Update: {
+          affiliate_coupon_discount_pct?: number
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null

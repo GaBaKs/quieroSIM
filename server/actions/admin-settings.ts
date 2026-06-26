@@ -22,6 +22,8 @@ export interface PlatformSettings {
   commissionL1Pct: number;
   commissionL2Pct: number;
   minWithdrawalUsd: number;
+  /** Descuento default de los cupones de afiliado nuevos (%). */
+  affiliateCouponDiscountPct: number;
 }
 
 export interface AdminAccount {
@@ -40,6 +42,7 @@ function mapSettings(d: Record<string, unknown>): PlatformSettings {
     commissionL1Pct: Number(d.commission_l1_pct ?? 0),
     commissionL2Pct: Number(d.commission_l2_pct ?? 0),
     minWithdrawalUsd: Number(d.min_withdrawal_usd ?? 0),
+    affiliateCouponDiscountPct: Number(d.affiliate_coupon_discount_pct ?? 10),
   };
 }
 
@@ -63,6 +66,7 @@ const settingsSchema = z.object({
   commissionL1Pct: z.number().min(0).max(100),
   commissionL2Pct: z.number().min(0).max(100),
   minWithdrawalUsd: z.number().min(0).max(100000),
+  affiliateCouponDiscountPct: z.number().min(0).max(100),
 });
 
 export async function updateSettings(input: PlatformSettings): Promise<Result<PlatformSettings>> {
@@ -82,6 +86,7 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
       commission_l1_pct: s.commissionL1Pct,
       commission_l2_pct: s.commissionL2Pct,
       min_withdrawal_usd: s.minWithdrawalUsd,
+      affiliate_coupon_discount_pct: s.affiliateCouponDiscountPct,
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1);

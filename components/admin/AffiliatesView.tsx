@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Check, Pause, Play, X, Link2, Ticket, Users, DollarSign, Banknote, Loader2 } from 'lucide-react';
-import { setAffiliateStatus, markWithdrawalPaid, type AdminAffiliateRow, type PendingWithdrawal } from '@/server/actions/admin-affiliates';
+import { Search, Check, Pause, Play, X, Link2, Ticket, Users, DollarSign, Banknote, Loader2, Pencil } from 'lucide-react';
+import { setAffiliateStatus, markWithdrawalPaid, updateAffiliateCoupon, type AdminAffiliateRow, type PendingWithdrawal } from '@/server/actions/admin-affiliates';
+import CreateUserDialog from '@/components/admin/CreateUserDialog';
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
@@ -20,6 +21,25 @@ export default function AffiliatesView({ affiliates, withdrawals }: { affiliates
   const [filter, setFilter] = useState<'all' | AdminAffiliateRow['status']>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Edición del cupón del afiliado (código + descuento).
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editCode, setEditCode] = useState('');
+  const [editDisc, setEditDisc] = useState('');
+  const [savingCoupon, setSavingCoupon] = useState(false);
+
+  const startEdit = (a: AdminAffiliateRow) => {
+    setEditId(a.id);
+    setEditCode(a.couponCode ?? '');
+    setEditDisc(String(a.couponDiscountPct ?? 10));
+  };
+  const saveCoupon = async (affiliateId: string) => {
+    setSavingCoupon(true);
+    const res = await updateAffiliateCoupon({ affiliateId, code: editCode.trim(), discountPct: Number(editDisc) });
+    setSavingCoupon(false);
+    if (res.ok) { setEditId(null); router.refresh(); }
+    else alert(res.error.message);
+  };
 
   // Resumen (reporte rápido) derivado del listado.
   const activeCount = affiliates.filter((a) => a.status === 'approved').length;
@@ -69,6 +89,12 @@ export default function AffiliatesView({ affiliates, withdrawals }: { affiliates
 
   return (
     <div className="space-y-4">
+      {/* Encabezado: crear afiliado directo */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-black text-zinc-900 dark:text-white">Afiliados</h2>
+        <CreateUserDialog defaultRole="affiliate" lockRole triggerLabel="Nuevo afiliado" title="Crear afiliado" />
+      </div>
+
       {/* Resumen */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Summary icon={<Users className="h-4 w-4" />} label="Activos" value={String(activeCount)} sub={pendingApproval ? `${pendingApproval} por aprobar` : undefined} />
@@ -157,14 +183,36 @@ export default function AffiliatesView({ affiliates, withdrawals }: { affiliates
                     <td className="py-3 px-4 text-sm text-zinc-500">{usd(a.paidCommission)}</td>
                     <td className="py-3 px-4">
                       {a.referralLink ? (
-                        <div className="space-y-1">
-                          <button onClick={() => refUrl && copy(refUrl, `l${a.id}`)} className="flex items-center gap-1 text-[11px] font-bold text-[#9933c1] dark:text-[#b3ff6b] hover:underline cursor-pointer">
-                            <Link2 className="h-3 w-3" /> {copied === `l${a.id}` ? 'Copiado ✓' : 'Link'}
-                          </button>
-                          <button onClick={() => a.couponCode && copy(a.couponCode, `c${a.id}`)} className="flex items-center gap-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 hover:underline cursor-pointer">
-                            <Ticket className="h-3 w-3" /> {copied === `c${a.id}` ? 'Copiado ✓' : a.couponCode}
-                          </button>
-                        </div>
+                        editId === a.id ? (
+                          <div className="space-y-1.5 min-w-[180px]">
+                            <input value={editCode} onChange={(e) => setEditCode(e.target.value)} placeholder="CÓDIGO"
+                              className="w-full px-2 py-1 text-[11px] font-mono uppercase bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#9933c1]" />
+                            <div className="flex items-center gap-1.5">
+                              <input type="number" min="0" max="100" value={editDisc} onChange={(e) => setEditDisc(e.target.value)}
+                                className="w-16 px-2 py-1 text-[11px] bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#9933c1]" />
+                              <span className="text-[11px] text-zinc-400">% desc.</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button onClick={() => saveCoupon(a.id)} disabled={savingCoupon} className="inline-flex items-center gap-1 rounded-md bg-[#9933c1] hover:bg-[#7100a5] text-white px-2 py-1 text-[11px] font-bold disabled:opacity-50 cursor-pointer">
+                                {savingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Guardar
+                              </button>
+                              <button onClick={() => setEditId(null)} className="rounded-md border border-zinc-200 dark:border-white/10 px-2 py-1 text-[11px] font-bold text-zinc-500 cursor-pointer">Cancelar</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <button onClick={() => refUrl && copy(refUrl, `l${a.id}`)} className="flex items-center gap-1 text-[11px] font-bold text-[#9933c1] dark:text-[#b3ff6b] hover:underline cursor-pointer">
+                              <Link2 className="h-3 w-3" /> {copied === `l${a.id}` ? 'Copiado ✓' : 'Link'}
+                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button onClick={() => a.couponCode && copy(a.couponCode, `c${a.id}`)} className="flex items-center gap-1 text-[11px] font-mono text-zinc-600 dark:text-zinc-300 hover:underline cursor-pointer">
+                                <Ticket className="h-3 w-3" /> {copied === `c${a.id}` ? 'Copiado ✓' : a.couponCode}
+                              </button>
+                              {a.couponDiscountPct !== null && <span className="text-[10px] font-bold text-zinc-400">{a.couponDiscountPct}%</span>}
+                              <button onClick={() => startEdit(a)} title="Editar cupón" className="text-zinc-400 hover:text-[#9933c1] cursor-pointer"><Pencil className="h-3 w-3" /></button>
+                            </div>
+                          </div>
+                        )
                       ) : (
                         <span className="text-[11px] text-zinc-400">—</span>
                       )}

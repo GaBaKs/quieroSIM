@@ -27,6 +27,7 @@ export interface AdminAffiliateRow {
   paidCommission: number;
   referralLink: string | null;
   couponCode: string | null;
+  couponDiscountPct: number | null;
   createdAt: string | null;
 }
 
@@ -35,13 +36,14 @@ export async function getAffiliatesAdmin(): Promise<Result<AdminAffiliateRow[]>>
   if (!guard.ok) return guard;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: profiles, error: pErr }, { data: comms }, { data: orders }] = await Promise.all([
+  const [{ data: profiles, error: pErr }, { data: comms }, { data: orders }, { data: coupons }] = await Promise.all([
     supabase
       .from('affiliate_profile')
       .select('id, channel, estimated_audience, status, referral_link, coupon_code, created_at, user_profile:user_id(email, full_name)')
       .order('created_at', { ascending: false }),
     supabase.from('commission_movement').select('affiliate_profile_id, amount, status'),
     supabase.from('order').select('affiliate_profile_id').not('affiliate_profile_id', 'is', null),
+    supabase.from('coupon').select('affiliate_profile_id, discount_value').not('affiliate_profile_id', 'is', null),
   ]);
 
   if (pErr) {
@@ -62,6 +64,10 @@ export async function getAffiliatesAdmin(): Promise<Result<AdminAffiliateRow[]>>
     const id = o.affiliate_profile_id as string;
     salesBy.set(id, (salesBy.get(id) ?? 0) + 1);
   }
+  const discountBy = new Map<string, number>();
+  for (const c of coupons ?? []) {
+    if (c.affiliate_profile_id) discountBy.set(c.affiliate_profile_id as string, Number(c.discount_value ?? 0));
+  }
 
   const rows: AdminAffiliateRow[] = (profiles ?? []).map((p) => {
     const up = Array.isArray(p.user_profile) ? p.user_profile[0] : p.user_profile;
@@ -77,6 +83,7 @@ export async function getAffiliatesAdmin(): Promise<Result<AdminAffiliateRow[]>>
       paidCommission: Math.round((paidBy.get(p.id) ?? 0) * 100) / 100,
       referralLink: p.referral_link,
       couponCode: p.coupon_code,
+      couponDiscountPct: discountBy.has(p.id) ? discountBy.get(p.id)! : null,
       createdAt: p.created_at,
     };
   });
@@ -148,6 +155,56 @@ export async function getPendingWithdrawals(): Promise<Result<PendingWithdrawal[
     };
   });
   return ok(rows);
+}
+
+const couponSchema = z.object({
+  affiliateId: z.string().uuid(),
+  code: z.string().trim().min(3).max(24),
+  discountPct: z.number().min(0).max(100),
+});
+
+/** Renombra el código del cupón del afiliado y/o cambia su descuento (admin). */
+export async function updateAffiliateCoupon(input: {
+  affiliateId: string; code: string; discountPct: number;
+}): Promise<Result<{ code: string; discountPct: number }>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(couponSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('admin_update_affiliate_coupon' as never, {
+    p_affiliate_id: parsed.data.affiliateId,
+    p_code: parsed.data.code,
+    p_discount_pct: parsed.data.discountPct,
+  } as never);
+  if (error) {
+    logger.error('updateAffiliateCoupon falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar el cupón.');
+  }
+  const r = data as { ok?: boolean; reason?: string; code?: string; discount?: number } | null;
+  if (!r?.ok) return err(ErrorCodes.VALIDATION, r?.reason ?? 'No se pudo actualizar el cupón.');
+  revalidatePath('/admin/affiliates');
+  return ok({ code: r.code ?? parsed.data.code, discountPct: Number(r.discount ?? parsed.data.discountPct) });
+}
+
+const createAffiliateSchema = z.object({ userId: z.string().uuid() });
+
+/** Convierte a un usuario existente en afiliado APROBADO (genera link + cupón). */
+export async function createAffiliateForUser(input: { userId: string }): Promise<Result<{ affiliateId: string }>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(createAffiliateSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('admin_create_affiliate' as never, { p_user_id: parsed.data.userId } as never);
+  if (error) {
+    logger.error('createAffiliateForUser falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos crear el afiliado.');
+  }
+  const r = data as { ok?: boolean; reason?: string; affiliateId?: string } | null;
+  if (!r?.ok) return err(ErrorCodes.VALIDATION, r?.reason ?? 'No se pudo crear el afiliado.');
+  revalidatePath('/admin/affiliates');
+  return ok({ affiliateId: r.affiliateId! });
 }
 
 const withdrawalSchema = z.object({ withdrawalId: z.string().uuid() });

@@ -258,7 +258,15 @@ export async function createUser(input: { email: string; password: string; role?
   const parsed = parseInput(createUserSchema, input);
   if (!parsed.ok) return parsed;
   // La Edge Function audita (audit_log user_created) con service_role.
-  return callEdgeFunctionAuthed<{ userId: string }>('admin-users/create', parsed.data);
+  const res = await callEdgeFunctionAuthed<{ userId: string }>('admin-users/create', parsed.data);
+  // Si se creó como afiliado, generamos también su perfil aprobado (link + cupón).
+  // Sin esto el usuario tendría el rol pero no figuraría como afiliado.
+  if (res.ok && parsed.data.role === 'affiliate') {
+    const supabase = await createSupabaseServerClient();
+    const { error: affErr } = await supabase.rpc('admin_create_affiliate' as never, { p_user_id: res.data.userId } as never);
+    if (affErr) logger.error('createUser: admin_create_affiliate falló', { error: affErr.message });
+  }
+  return res;
 }
 
 function isUuid(v: string): boolean {

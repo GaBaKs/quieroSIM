@@ -36,6 +36,7 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
     commissionL1Pct: String(settings.commissionL1Pct),
     commissionL2Pct: String(settings.commissionL2Pct),
     minWithdrawalUsd: String(settings.minWithdrawalUsd),
+    affiliateCouponDiscountPct: String(settings.affiliateCouponDiscountPct),
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -53,6 +54,7 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
       commissionL1Pct: Number(form.commissionL1Pct),
       commissionL2Pct: Number(form.commissionL2Pct),
       minWithdrawalUsd: Number(form.minWithdrawalUsd),
+      affiliateCouponDiscountPct: Number(form.affiliateCouponDiscountPct),
     });
     setSaving(false);
     if (res.ok) {
@@ -163,6 +165,11 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
           <div>
             <label className={labelCls}>Mínimo de retiro (USD)</label>
             <input type="number" value={form.minWithdrawalUsd} onChange={(e) => set('minWithdrawalUsd', e.target.value)} className={inputCls} min="0" />
+          </div>
+          <div>
+            <label className={labelCls}>Descuento de cupones de afiliado (%)</label>
+            <input type="number" value={form.affiliateCouponDiscountPct} onChange={(e) => set('affiliateCouponDiscountPct', e.target.value)} className={inputCls} min="0" max="100" />
+            <p className="text-xs text-zinc-400 mt-1">Default para los cupones de afiliados nuevos. El de cada afiliado se puede ajustar en su panel.</p>
           </div>
           {SaveButton}
         </motion.div>
