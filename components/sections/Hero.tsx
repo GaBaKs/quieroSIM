@@ -120,9 +120,9 @@ export default function Hero() {
               className="flex flex-wrap justify-center lg:justify-start items-center gap-x-5 gap-y-2 pt-4 border-t border-zinc-200 max-w-lg mx-auto lg:mx-0"
             >
               {[
-                { icon: Zap, label: 'Activación en 2 min' },
-                { icon: ShieldCheck, label: 'Sin roaming oculto' },
-                { icon: Download, label: 'QR instantáneo' },
+                { icon: Zap, label: t('hero.badgeActivation') },
+                { icon: ShieldCheck, label: t('hero.badgeNoRoaming') },
+                { icon: Download, label: t('hero.badgeQR') },
               ].map(({ icon: Icon, label }, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Icon className="h-3.5 w-3.5 text-[#9933c1] shrink-0" />

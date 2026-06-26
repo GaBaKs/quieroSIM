@@ -28,6 +28,7 @@ export default function CouponsView({ coupons, plans }: { coupons: AdminCouponRo
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode('grid');
     }
   }, []);

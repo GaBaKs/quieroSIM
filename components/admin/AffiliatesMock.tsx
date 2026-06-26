@@ -51,6 +51,7 @@ export default function AffiliatesMock({ isSuperAdmin }: { isSuperAdmin: boolean
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode('grid');
     }
   }, []);

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 
 export default async function AdminYesimPage() {
   const ctx = await getAuthContext();
-  
+
   // Solo super_admin tiene acceso
   if (!ctx || ctx.adminSubRole !== 'super_admin') {
     redirect('/admin');

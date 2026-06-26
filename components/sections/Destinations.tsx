@@ -19,7 +19,7 @@ interface DestinationsProps {
 
 
 
-function FeatureItem({ text }: { text: string }) {
+function FeatureItem({ text, showMoreText, showLessText }: { text: string, showMoreText: string, showLessText: string }) {
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 65;
 
@@ -39,7 +39,7 @@ function FeatureItem({ text }: { text: string }) {
         }}
         className="text-[#9933c1] font-bold ml-1 hover:underline text-[11px] inline-flex"
       >
-        {expanded ? 'Ver menos' : 'Ver más'}
+        {expanded ? showLessText : showMoreText}
       </button>
     </span>
   );
@@ -618,7 +618,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
                         return (
                           <li key={i} className="flex items-start gap-2">
                             <Check className="h-3.5 w-3.5 text-[#9933c1] flex-shrink-0 mt-0.5" />
-                            <FeatureItem text={localizedFeat} />
+                            <FeatureItem text={localizedFeat} showMoreText={t('destinations.showMore')} showLessText={t('destinations.showLess')} />
                           </li>
                         );
                       })}
@@ -628,9 +628,6 @@ export default function Destinations({ destinations, plansByDestination }: Desti
                   {/* Pricing row with trigger button */}
                   <div className="mt-8 pt-4 border-t border-black/5 flex items-center justify-between gap-4">
                     <div className="text-left">
-                      <span className="text-[10px] text-zinc-400 line-through tracking-wider block font-sans">
-                        $ {Math.round(plan.priceUSD * 1.25)} USD
-                      </span>
                       <span className="font-sans font-black text-zinc-900 tracking-tight block text-2xl leading-none">
                         ${plan.priceUSD}{' '}
                         <span className="text-xs font-normal text-zinc-500 tracking-wider">USD</span>
@@ -670,7 +667,7 @@ export default function Destinations({ destinations, plansByDestination }: Desti
                 }}
                 className="text-sm font-bold text-[#9933c1] transition-colors border border-[#9933c1]/20 bg-[#9933c1]/5 hover:bg-[#9933c1]/10 px-6 py-2.5 rounded-full flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                {showAllPlans ? 'Ocultar planes' : `Ver todos los planes (${activePlans.length})`}
+                {showAllPlans ? t('destinations.hidePlans') : `${t('destinations.showAllPlans')} (${activePlans.length})`}
                 <motion.div
                   animate={{ rotate: showAllPlans ? 180 : 0 }}
                   transition={{ duration: 0.3, ease: "easeInOut" }}

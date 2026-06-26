@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { Link2, Loader2 } from 'lucide-react';
 import { claimOrder } from '@/server/actions/esims';
@@ -10,6 +11,7 @@ import { claimOrder } from '@/server/actions/esims';
  * cuenta). El usuario ingresa el número de orden del comprobante + ese email.
  */
 export default function ClaimPurchase() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [orderRef, setOrderRef] = useState('');
@@ -51,7 +53,7 @@ export default function ClaimPurchase() {
       {open && (
         <form onSubmit={submit} className="mt-4 space-y-3">
           <p className="text-xs text-slate-500">
-            Ingresá el <strong>número de orden</strong> y el <strong>email</strong> que usaste en la compra (están en el email de confirmación que te llegó).
+            Ingresá el <strong>número de orden</strong> {t('account.claimAnd')} <strong>email</strong> que usaste en la compra (están en el email de confirmación que te llegó).
           </p>
           <input value={orderRef} onChange={(e) => setOrderRef(e.target.value)} placeholder="Número de orden (ej. A1B2C3D4)" className={inputCls} required />
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email de la compra" className={inputCls} required />

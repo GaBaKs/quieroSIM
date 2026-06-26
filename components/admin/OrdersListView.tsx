@@ -13,6 +13,7 @@ export default function OrdersListView({ rows }: { rows: AdminOrderRow[] }) {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setViewMode('grid');
     }
   }, []);

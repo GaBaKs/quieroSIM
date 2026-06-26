@@ -101,7 +101,7 @@ function RegisterForm() {
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#9933c1] focus:border-transparent transition-all"
-                  placeholder="tunombre@viaje.com"
+                  placeholder={t('auth.placeholderEmail')}
                   required
                 />
               </div>
@@ -153,7 +153,7 @@ function RegisterForm() {
 
             <div className="flex items-center gap-3 my-6">
               <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs text-slate-400">o</span>
+              <span className="text-xs text-slate-400">{t('auth.orText')}</span>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
             <GoogleButton next="/account" />

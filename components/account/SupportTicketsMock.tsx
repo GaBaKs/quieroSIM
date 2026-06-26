@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, LifeBuoy, X, Loader2, Search, CheckCircle2, Clock } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type MockTicket = {
   id: string;
@@ -18,6 +19,7 @@ const INITIAL_MOCKS: MockTicket[] = [
 ];
 
 export default function SupportTicketsMock() {
+  const { t } = useLanguage();
   const [tickets, setTickets] = useState<MockTicket[]>(INITIAL_MOCKS);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,7 +93,7 @@ export default function SupportTicketsMock() {
             {tickets.length === 0 ? (
               <div className="p-12 text-center text-slate-500 dark:text-zinc-500">
                 <LifeBuoy className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p>No tienes tickets de soporte activos.</p>
+                <p>{t('account.supportEmpty')}</p>
               </div>
             ) : (
               tickets.map((tkt, idx) => (
@@ -156,7 +158,7 @@ export default function SupportTicketsMock() {
               </button>
 
               <div className="mb-8">
-                <h3 className="text-2xl font-black tracking-tight dark:text-white">Crear Ticket</h3>
+                <h3 className="text-2xl font-black tracking-tight dark:text-white">{t('account.supportCreate')}</h3>
                 <p className="text-slate-500 dark:text-zinc-400 mt-1">
                   Describí tu problema y te responderemos a la brevedad.
                 </p>

@@ -500,7 +500,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
 
                 {/* Footer security logos */}
                 <div className="flex items-center justify-center gap-3 text-[9px] sm:text-[10px] text-slate-400 font-sans pt-1 flex-wrap">
-                  <span>🔒 Transacción Protegida</span>
+                  <span>🔒 {t('checkout.secureTransaction')}</span>
                   <span>•</span>
                   <span>VISA</span>
                   <span>•</span>
