@@ -153,8 +153,37 @@ Deno.serve(async (req: Request) => {
 
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object as Stripe.PaymentIntent;
+    const batchId = intent.metadata?.wholesale_batch_id;
     const orderId = intent.metadata?.order_id;
-    if (orderId) {
+    if (batchId) {
+      // ── Camino lote mayorista ──────────────────────────────────────────────
+      // Candado de batch: pending→paid atómico (solo UNA ejecución lo logra).
+      const { data: batchPaid } = await supabase
+        .from('wholesale_batch')
+        .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_payment_intent_id: intent.id })
+        .eq('id', batchId)
+        .eq('status', 'pending')
+        .select('id');
+      if (batchPaid && batchPaid.length > 0) {
+        await supabase.rpc('assign_invoice_number', { p_batch_id: batchId });
+        // Marcar las órdenes del lote pending→paid y provisionar cada una (idempotente por ítem).
+        const { data: bOrders } = await supabase
+          .from('order')
+          .update({ status: 'paid' })
+          .eq('batch_id', batchId)
+          .eq('status', 'pending')
+          .select('id');
+        for (const o of bOrders ?? []) {
+          await supabase.from('provision_job').upsert({ order_id: o.id }, { onConflict: 'order_id', ignoreDuplicates: true });
+          const p = startProvisionAndDeliver(supabase, o.id);
+          if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(p);
+          else await p;
+        }
+        processingResult = 'batch_provision_started';
+      } else {
+        processingResult = 'batch_not_pending';
+      }
+    } else if (orderId) {
       // Candado 2: transición pending→paid atómica — solo UNA ejecución la logra.
       const { data: updated } = await supabase
         .from('order')

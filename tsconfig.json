@@ -43,6 +43,8 @@
     "supabase/functions/sync-devices",
     "supabase/functions/checkout",
     "supabase/functions/checkout-test",
+    "supabase/functions/wholesale-checkout",
+    "supabase/functions/wholesale-checkout-test",
     "supabase/functions/stripe-webhook",
     "supabase/functions/stripe-webhook-test",
     "supabase/functions/deliveries",

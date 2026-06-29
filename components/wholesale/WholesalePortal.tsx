@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Loader2, Clock, Ban, CheckCircle2 } from 'lucide-react';
-import { registerAgency, type MyAgency } from '@/server/actions/wholesale';
+import { Building2, Loader2, Clock, Ban } from 'lucide-react';
+import { registerAgency, type MyAgency, type WholesalePlan } from '@/server/actions/wholesale';
+import WholesaleShop from '@/components/wholesale/WholesaleShop';
 
-/** Portal mayorista (lado agencia). M1: registro + estado. Catálogo/compra/inventario llegan en M2-M4. */
-export default function WholesalePortal({ agency }: { agency: MyAgency | null }) {
+/** Portal mayorista (lado agencia). Registro/estado + tienda (catálogo + compra en lote) si aprobada. */
+export default function WholesalePortal({ agency, catalog }: { agency: MyAgency | null; catalog: WholesalePlan[] }) {
   const router = useRouter();
 
   if (!agency) return <RegisterForm onDone={() => router.refresh()} />;
@@ -15,17 +16,15 @@ export default function WholesalePortal({ agency }: { agency: MyAgency | null })
   if (agency.status === 'suspended')
     return <Notice tone="zinc" icon={<Ban className="h-7 w-7" />} title="Cuenta suspendida" text="Tu cuenta de agencia está suspendida temporalmente. Escribinos para reactivarla." />;
 
-  // approved (M1: placeholder hasta el catálogo)
+  // approved → tienda mayorista
   return (
-    <div className="rounded-2xl border border-[#9933c1]/20 bg-[#9933c1]/[0.04] p-6 space-y-2">
-      <div className="flex items-center gap-2 text-[#7100a5] dark:text-[#b3ff6b]">
-        <CheckCircle2 className="h-6 w-6" />
-        <h3 className="font-black text-lg">{agency.companyName} · aprobada</h3>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <strong className="text-zinc-700 dark:text-zinc-200">{agency.companyName}</strong> · precios mayoristas{agency.customMarginPct !== null ? ` (margen ${agency.customMarginPct}%)` : ''}
+        </p>
       </div>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300">
-        Tu agencia está activa. El <strong>catálogo mayorista</strong>, la <strong>compra en lote</strong> y el <strong>inventario</strong> se habilitan en los próximos pasos.
-      </p>
-      {agency.customMarginPct !== null && <p className="text-xs text-zinc-400">Tu margen propio: {agency.customMarginPct}%</p>}
+      <WholesaleShop catalog={catalog} />
     </div>
   );
 }

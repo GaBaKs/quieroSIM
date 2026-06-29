@@ -7,6 +7,11 @@ import { parseInput } from '../lib/validation';
 import { logger } from '../lib/logger';
 import { createSupabaseServerClient } from '../db/supabase-server';
 import { requireAgency } from '../lib/admin-guard';
+import { callEdgeFunctionAuthed } from '../lib/edge';
+
+/** Nombre de la Edge de checkout mayorista. Prod 'wholesale-checkout' (Stripe live);
+ *  en local con WHOLESALE_FN_NAME=wholesale-checkout-test apunta al espejo en test. */
+const WHOLESALE_FN = process.env.WHOLESALE_FN_NAME ?? 'wholesale-checkout';
 
 /**
  * Fachada del portal mayorista (lado agencia). El alta va por RPC SECURITY
@@ -119,4 +124,24 @@ export async function getWholesaleCatalog(): Promise<Result<WholesalePlan[]>> {
       priceWholesale: Number(r.price_wholesale),
     })),
   );
+}
+
+export interface WholesaleCheckoutSession {
+  batchId: string;
+  clientSecret: string;
+  totalUsd: number;
+  count: number;
+}
+
+const cartSchema = z.object({
+  items: z.array(z.object({ planId: z.string().uuid(), qty: z.number().int().min(1).max(200) })).min(1).max(50),
+});
+
+/** Crea el lote + PaymentIntent por el total mayorista. Devuelve el clientSecret para pagar. */
+export async function createWholesaleCheckout(input: { items: { planId: string; qty: number }[] }): Promise<Result<WholesaleCheckoutSession>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(cartSchema, input);
+  if (!parsed.ok) return parsed;
+  return callEdgeFunctionAuthed<WholesaleCheckoutSession>(`${WHOLESALE_FN}/create`, { items: parsed.data.items });
 }

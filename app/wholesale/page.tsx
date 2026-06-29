@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import WholesalePortal from '@/components/wholesale/WholesalePortal';
-import { getMyAgency } from '@/server/actions/wholesale';
+import { getMyAgency, getWholesaleCatalog, type WholesalePlan } from '@/server/actions/wholesale';
 
 export const metadata: Metadata = {
   title: 'Portal Mayorista | QuieroSIM',
@@ -9,17 +9,22 @@ export const metadata: Metadata = {
 
 export default async function WholesalePage() {
   const res = await getMyAgency();
+  let catalog: WholesalePlan[] = [];
+  if (res.ok && res.data?.status === 'approved') {
+    const cat = await getWholesaleCatalog();
+    if (cat.ok) catalog = cat.data;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 px-4 py-12">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Portal Mayorista</h1>
           <p className="text-slate-500 dark:text-zinc-400 mt-1">Para agencias de viaje y revendedores.</p>
         </div>
 
         {res.ok ? (
-          <WholesalePortal agency={res.data} />
+          <WholesalePortal agency={res.data} catalog={catalog} />
         ) : (
           <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-6 text-center space-y-3">
             <p className="text-sm text-slate-600 dark:text-zinc-300">Iniciá sesión para acceder al portal mayorista.</p>
