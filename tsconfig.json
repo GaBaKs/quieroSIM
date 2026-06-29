@@ -50,6 +50,7 @@
     "supabase/functions/admin-health",
     "supabase/functions/whatsapp-send",
     "supabase/functions/admin-users",
+    "supabase/functions/notify",
     "supabase/functions/_shared/services/fulfillment.ts"
   ]
 }
