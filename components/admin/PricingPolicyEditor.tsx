@@ -39,18 +39,19 @@ function flagEmoji(iso: string): string {
 export default function PricingPolicyEditor({ policy }: { policy: PricingPolicy }) {
   const router = useRouter();
 
-  // ── Globales (FX + redondeo) ──
+  // ── Globales (FX + redondeo + margen mayorista) ──
   const [fx, setFx] = useState(String(policy.eurUsdRate));
   const [round, setRound] = useState(policy.roundPsychological);
+  const [wMargin, setWMargin] = useState(String(policy.wholesaleMarginPct));
   const [gBusy, setGBusy] = useState(false);
   const [gMsg, setGMsg] = useState<string | null>(null);
 
   const saveGlobals = async () => {
     setGBusy(true);
     setGMsg(null);
-    const res = await updatePricingGlobals({ eurUsdRate: Number(fx), roundPsychological: round });
+    const res = await updatePricingGlobals({ eurUsdRate: Number(fx), roundPsychological: round, wholesaleMarginPct: Number(wMargin) });
     setGBusy(false);
-    setGMsg(res.ok ? 'Guardado ✓' : res.error.message);
+    setGMsg(res.ok ? 'Guardado ✓ — recalculá para aplicar' : res.error.message);
     if (res.ok) router.refresh();
   };
 
@@ -97,14 +98,22 @@ export default function PricingPolicyEditor({ policy }: { policy: PricingPolicy 
             <label className={labelCls}>Tipo de cambio EUR → USD</label>
             <input type="number" step="0.001" value={fx} onChange={(e) => setFx(e.target.value)} className={`${inputCls} w-40`} />
           </div>
+          <div>
+            <label className={labelCls}>Margen mayorista global (%)</label>
+            <input type="number" step="1" min="0" value={wMargin} onChange={(e) => setWMargin(e.target.value)} className={`${inputCls} w-40`} />
+          </div>
           <label className="flex items-center gap-2.5 cursor-pointer select-none pb-2.5">
             <input type="checkbox" checked={round} onChange={(e) => setRound(e.target.checked)} className="h-4 w-4 rounded accent-[#9933c1]" />
             <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Redondeo psicológico (.49 / .99)</span>
           </label>
         </div>
+        <p className="text-xs text-zinc-400">
+          El margen mayorista global es el precio base de las agencias (sobre el costo). Cada plan puede pisarlo con margen propio o
+          precio fijo en <strong>Planes y precios → Mayorista</strong>; cada agencia puede tener su margen negociado.
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           <QuieroButton variant="primary" className="py-2.5 px-5 text-sm flex items-center gap-2" onClick={saveGlobals}>
-            <Save className="h-4 w-4" /> {gBusy ? 'Guardando…' : 'Guardar tipo de cambio'}
+            <Save className="h-4 w-4" /> {gBusy ? 'Guardando…' : 'Guardar globales'}
           </QuieroButton>
           {gMsg && <span className="text-sm text-zinc-600 dark:text-zinc-300">{gMsg}</span>}
           <button onClick={handleRecalc} disabled={recalcBusy} className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 px-5 py-2.5 text-sm font-bold text-zinc-700 dark:text-zinc-200 hover:border-[#9933c1]/50 transition disabled:opacity-60 cursor-pointer">

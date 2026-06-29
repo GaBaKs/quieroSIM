@@ -135,10 +135,7 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
             <label className={labelCls}>Margen default para planes nuevos (%)</label>
             <input type="number" value={form.defaultMarginPct} onChange={(e) => set('defaultMarginPct', e.target.value)} className={inputCls} min="0" max="1000" />
           </div>
-          <div>
-            <label className={labelCls}>Margen mayoristas (%)</label>
-            <input type="number" value={form.wholesaleMarginPct} onChange={(e) => set('wholesaleMarginPct', e.target.value)} className={inputCls} min="0" max="1000" />
-          </div>
+          <p className="text-xs text-zinc-400">El <strong>margen mayorista</strong> se gestiona en <strong>Política de precios</strong> (junto al recálculo de precios).</p>
           <div>
             <label className={labelCls}>Umbral de variación de precio para alerta (%)</label>
             <input type="number" value={form.priceAlertThresholdPct} onChange={(e) => set('priceAlertThresholdPct', e.target.value)} className={inputCls} min="0" max="100" />

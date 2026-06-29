@@ -143,6 +143,7 @@ export interface PricingGroup {
 export interface PricingPolicy {
   eurUsdRate: number;
   roundPsychological: boolean;
+  wholesaleMarginPct: number;
   groups: PricingGroup[];
 }
 
@@ -166,7 +167,7 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   if (!guard.ok) return guard;
   const supabase = await createSupabaseServerClient();
   const [{ data: s }, { data: groups }, { data: members }, { data: comp }, { data: ranges }] = await Promise.all([
-    supabase.from('platform_settings').select('eur_usd_rate, round_psychological').eq('id', 1).maybeSingle(),
+    supabase.from('platform_settings').select('eur_usd_rate, round_psychological, wholesale_margin_pct').eq('id', 1).maybeSingle(),
     supabase.from('country_group').select('*').order('sort_order'),
     supabase.from('country_group_member').select('iso_country, group_id'),
     supabase.from('group_competitor_price').select('*').order('sort_order'),
@@ -198,6 +199,7 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   return ok({
     eurUsdRate: Number(s?.eur_usd_rate ?? 1.135),
     roundPsychological: s?.round_psychological ?? true,
+    wholesaleMarginPct: Number(s?.wholesale_margin_pct ?? 15),
     groups: (groups ?? []).map((g) => ({
       id: g.id, name: g.name, slug: g.slug, isDefault: g.is_default,
       floorMarkupPct: g.floor_markup_pct === null ? null : Number(g.floor_markup_pct),
@@ -210,10 +212,14 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   });
 }
 
-const globalsSchema = z.object({ eurUsdRate: z.number().min(0.1).max(10), roundPsychological: z.boolean() });
+const globalsSchema = z.object({
+  eurUsdRate: z.number().min(0.1).max(10),
+  roundPsychological: z.boolean(),
+  wholesaleMarginPct: z.number().min(0).max(1000),
+});
 
-/** Tipo de cambio EUR→USD + redondeo psicológico. Solo super_admin. */
-export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsychological: boolean }): Promise<Result<null>> {
+/** Tipo de cambio EUR→USD + redondeo psicológico + margen mayorista global. Solo super_admin. */
+export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsychological: boolean; wholesaleMarginPct: number }): Promise<Result<null>> {
   const guard = await requireSuperAdmin();
   if (!guard.ok) return guard;
   const parsed = parseInput(globalsSchema, input);
@@ -221,7 +227,7 @@ export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsy
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from('platform_settings')
-    .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, updated_at: new Date().toISOString() })
+    .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, wholesale_margin_pct: parsed.data.wholesaleMarginPct, updated_at: new Date().toISOString() })
     .eq('id', 1);
   if (error) {
     logger.error('updatePricingGlobals falló', { error: error.message });

@@ -23,7 +23,7 @@ export default async function AdminSettingsPage() {
             salesNotifyEmail: '', claimsNotifyEmail: '',
           }}
           admins={adminsRes.ok ? adminsRes.data : []}
-          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, groups: [] }}
+          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, wholesaleMarginPct: 15, groups: [] }}
         />
       )}
     </div>
