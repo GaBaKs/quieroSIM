@@ -923,6 +923,10 @@ export type Database = {
           updated_at: string | null
           use_fixed_price: boolean | null
           use_custom_margin: boolean | null
+          use_wholesale_fixed_price: boolean
+          wholesale_price_fixed: number | null
+          use_wholesale_custom_margin: boolean
+          wholesale_margin_pct: number | null
         }
         Insert: {
           cost_provider_eur: number
@@ -935,6 +939,10 @@ export type Database = {
           updated_at?: string | null
           use_fixed_price?: boolean | null
           use_custom_margin?: boolean | null
+          use_wholesale_fixed_price?: boolean
+          wholesale_price_fixed?: number | null
+          use_wholesale_custom_margin?: boolean
+          wholesale_margin_pct?: number | null
         }
         Update: {
           cost_provider_eur?: number
@@ -947,6 +955,10 @@ export type Database = {
           updated_at?: string | null
           use_fixed_price?: boolean | null
           use_custom_margin?: boolean | null
+          use_wholesale_fixed_price?: boolean
+          wholesale_price_fixed?: number | null
+          use_wholesale_custom_margin?: boolean
+          wholesale_margin_pct?: number | null
         }
         Relationships: [
           {
