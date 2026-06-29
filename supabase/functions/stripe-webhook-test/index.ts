@@ -176,12 +176,21 @@ Deno.serve(async (req: Request) => {
           .eq('batch_id', batchId)
           .eq('status', 'pending')
           .select('id');
-        for (const o of bOrders ?? []) {
+        const batchOrders = bOrders ?? [];
+        for (const o of batchOrders) {
           await supabase.from('provision_job').upsert({ order_id: o.id }, { onConflict: 'order_id', ignoreDuplicates: true });
-          const p = startProvisionAndDeliver(supabase, o.id);
-          if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(p);
-          else await p;
         }
+        // Provisión SECUENCIAL del lote: YeSim devuelve el MISMO iccid ante
+        // new_esim concurrentes del mismo plan → choca el unique(iccid) y la
+        // 2da queda failed_needs_review. Un solo new_esim a la vez lo evita.
+        // Una sola tarea de fondo para no demorar el 200 a Stripe.
+        const runBatch = (async () => {
+          for (const o of batchOrders) {
+            await startProvisionAndDeliver(supabase, o.id);
+          }
+        })();
+        if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(runBatch);
+        else await runBatch;
         processingResult = 'batch_provision_started';
       } else {
         processingResult = 'batch_not_pending';
