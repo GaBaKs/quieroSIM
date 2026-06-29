@@ -302,7 +302,7 @@ export const translations: Record<Language, any> = {
       verifiedBuyer: 'Comprador verificado',
       subtitle: 'Más de 10,000 viajeros confían en QuieroSIM para mantenerse conectados en todo momento.',
       reviews: [
-        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Uso QuieroSIM desde hace años en mis viajes y siempre es una excelente decisión. Funciona en todos lados súper rápido. Una vez necesité ayuda para instalarlo y el soporte me ayudó. Súper rápido y gentil.', location: 'Viaje a EE.UU.' },
+        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Descubrí QuieroSIM recientemente y, desde mi primera experiencia, se ha convertido en una solución de conectividad indispensable para todos mis viajes.', location: 'Viaje a EE.UU.' },
         { name: 'Juan Cruz', handle: '@juan_viajero', text: 'El plan de 10GB en Europa me rindió perfecto. Y el soporte me ayudó enseguida cuando tuve una duda.', location: 'Viaje a España' },
         { name: 'Carolina M.', handle: '@carom_tech', text: 'Soy productora y necesito conectividad siempre. El roaming me arruinaba. QuieroSIM me salvó la vida en mi estadía en la gira en Chile.', location: 'Viaje a Chile' }
       ],
@@ -1250,7 +1250,7 @@ export const translations: Record<Language, any> = {
       verifiedBuyer: 'Comprador verificado',
       subtitle: 'Mais de 10.000 viajantes confiam na QuieroSIM para se manterem conectados sempre.',
       reviews: [
-        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Uso a QuieroSIM há anos em minhas viagens e sempre é uma excelente decisão. Funciona em todos os lugares, super rápido. Uma vez precisei de ajuda para instalar e o suporte me ajudou. Super rápidos e gentis.', location: 'Viagem aos EUA' },
+        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Descobri a QuieroSIM recentemente e, desde a minha primeira experiência, tornou-se uma solução de conectividade indispensável para todas as minhas viagens.', location: 'Viagem aos EUA' },
         { name: 'Juan Cruz', handle: '@juan_viajero', text: 'O plano de 10GB na Europa funcionou perfeitamente. O suporte me ajudou na hora quando tive uma dúvida.', location: 'Viagem para a Espanha' },
         { name: 'Carolina M.', handle: '@carom_tech', text: 'Trabalho como produtora e preciso sempre de conexão. O roaming estava estourando meu orçamento. A QuieroSIM me salvou no Chile.', location: 'Viagem ao Chile' }
       ],
