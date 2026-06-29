@@ -35,7 +35,7 @@ const navigation = [
   { name: 'Cupones', href: '/admin/coupons', icon: Ticket },
   { name: 'Afiliados', href: '/admin/affiliates', icon: Network },
   { name: 'Mayoristas (por hacer)', href: '/admin/wholesale', icon: Building2 },
-  { name: 'Soporte (por hacer)', href: '/admin/support', icon: HeadphonesIcon },
+  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon },
   { name: 'YeSIM API', href: '/admin/yesim', icon: Smartphone, superAdminOnly: true },
   { name: 'Reportes', href: '/admin/reports', icon: BarChart3, superAdminOnly: true },
   { name: 'Configuración', href: '/admin/settings', icon: Settings, superAdminOnly: true },

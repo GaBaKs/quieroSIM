@@ -11,7 +11,7 @@ import AccountLogout from './AccountLogout';
 const navigation = [
   { name: 'Mis eSIMs', href: '/account', icon: Smartphone, exact: true },
   { name: 'Afiliados', href: '/account/affiliate', icon: Users },
-  { name: 'Ayuda y Soporte (por hacer)', href: '/account/support', icon: LifeBuoy },
+  { name: 'Ayuda y Soporte', href: '/account/support', icon: LifeBuoy },
   { name: 'Preguntas Frecuentes', href: '/account/faq', icon: HelpCircle },
 ];
 
