@@ -78,6 +78,8 @@ export interface DeliveryDeps {
 export interface SendOptions {
   /** Reenvío pedido por el usuario: aplica límite resend_count<3 + cooldown 60s. */
   manual?: boolean;
+  /** Override del destinatario (mayorista: enviar el QR al cliente final asignado). */
+  toEmail?: string;
 }
 
 export { CRON_MAX_ATTEMPTS, CRON_BACKOFF_MS, MANUAL_MAX_RESENDS, MANUAL_COOLDOWN_MS };
@@ -128,7 +130,7 @@ export async function sendQrDelivery(
 
   await store.recordAttempt(delivery.id, true);
   const sent = await deps.email.sendEmail({
-    to: esim.email,
+    to: options.toEmail ?? esim.email,
     subject,
     html,
     attachments: [{ filename: 'quierosim-esim-qr.png', content: qrPng, contentId: QR_CONTENT_ID }],

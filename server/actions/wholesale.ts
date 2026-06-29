@@ -145,3 +145,93 @@ export async function createWholesaleCheckout(input: { items: { planId: string; 
   if (!parsed.ok) return parsed;
   return callEdgeFunctionAuthed<WholesaleCheckoutSession>(`${WHOLESALE_FN}/create`, { items: parsed.data.items });
 }
+
+// ── Inventario + asignación (M4) ─────────────────────────────────────────────
+
+export interface InventoryEsim {
+  id: string;
+  planName: string | null;
+  iccid: string | null;
+  qrLpa: string | null;
+  iosTapLink: string | null;
+  statusQr: string;
+  inventoryStatus: 'unassigned' | 'assigned';
+  assignedClientName: string | null;
+  assignedClientEmail: string | null;
+  batchId: string | null;
+  createdAt: string | null;
+}
+
+/** Inventario de eSIMs emitidas de la agencia (RLS las limita a las suyas). */
+export async function getMyInventory(): Promise<Result<InventoryEsim[]>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('esim')
+    .select('id, iccid, qr_lpa, ios_tap_link, status_qr, inventory_status, assigned_client_name, assigned_client_email, created_at, order:order_id(batch_id, plan:plan_id(name))')
+    .eq('agency_profile_id', guard.data.agencyId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    logger.error('getMyInventory falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos cargar tu inventario.');
+  }
+  // deno-lint-ignore no-explicit-any
+  return ok((data ?? []).map((e: any) => {
+    const order = Array.isArray(e.order) ? e.order[0] : e.order;
+    const plan = order && (Array.isArray(order.plan) ? order.plan[0] : order.plan);
+    return {
+      id: e.id,
+      planName: plan?.name ?? null,
+      iccid: e.iccid,
+      qrLpa: e.qr_lpa,
+      iosTapLink: e.ios_tap_link,
+      statusQr: e.status_qr ?? 'generated',
+      inventoryStatus: (e.inventory_status ?? 'unassigned') as 'unassigned' | 'assigned',
+      assignedClientName: e.assigned_client_name,
+      assignedClientEmail: e.assigned_client_email,
+      batchId: order?.batch_id ?? null,
+      createdAt: e.created_at,
+    };
+  }));
+}
+
+const assignSchema = z.object({
+  esimId: z.string().uuid(),
+  clientName: z.string().trim().max(120).optional(),
+  clientEmail: z.string().trim().email(),
+});
+
+/** Asigna una eSIM a un cliente final y le envía el QR por email. */
+export async function assignEsim(input: { esimId: string; clientName?: string; clientEmail: string }): Promise<Result<{ emailed: boolean }>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(assignSchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('agency_assign_esim' as never, {
+    p_esim_id: parsed.data.esimId,
+    p_client_name: parsed.data.clientName ?? null,
+    p_client_email: parsed.data.clientEmail,
+  } as never);
+  if (error) {
+    logger.error('assignEsim falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos asignar la eSIM.');
+  }
+  const r = data as { ok?: boolean; reason?: string } | null;
+  if (!r?.ok) return err(ErrorCodes.VALIDATION, r?.reason ?? 'No se pudo asignar.');
+  // Enviar el QR al cliente (best-effort: la asignación ya quedó registrada).
+  const sent = await callEdgeFunctionAuthed<{ status: string }>('deliveries/assign-send', { esimId: parsed.data.esimId });
+  return ok({ emailed: sent.ok });
+}
+
+/** Reenvía el QR al cliente final ya asignado. */
+export async function resendAssignedQr(input: { esimId: string }): Promise<Result<null>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(z.object({ esimId: z.string().uuid() }), input);
+  if (!parsed.ok) return parsed;
+  const res = await callEdgeFunctionAuthed<{ status: string }>('deliveries/assign-send', { esimId: parsed.data.esimId });
+  if (!res.ok) return res;
+  return ok(null);
+}

@@ -582,6 +582,10 @@ export type Database = {
       esim: {
         Row: {
           agency_profile_id: string | null
+          assigned_at: string | null
+          assigned_client_email: string | null
+          assigned_client_name: string | null
+          inventory_status: string | null
           created_at: string | null
           data_left_mb: number | null
           data_package_mb: number | null
@@ -603,6 +607,10 @@ export type Database = {
         }
         Insert: {
           agency_profile_id?: string | null
+          assigned_at?: string | null
+          assigned_client_email?: string | null
+          assigned_client_name?: string | null
+          inventory_status?: string | null
           created_at?: string | null
           data_left_mb?: number | null
           data_package_mb?: number | null
@@ -624,6 +632,10 @@ export type Database = {
         }
         Update: {
           agency_profile_id?: string | null
+          assigned_at?: string | null
+          assigned_client_email?: string | null
+          assigned_client_name?: string | null
+          inventory_status?: string | null
           created_at?: string | null
           data_left_mb?: number | null
           data_package_mb?: number | null

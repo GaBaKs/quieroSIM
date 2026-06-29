@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Loader2, Clock, Ban } from 'lucide-react';
+import { Building2, Loader2, Clock, Ban, ShoppingCart, Package } from 'lucide-react';
 import { registerAgency, type MyAgency, type WholesalePlan } from '@/server/actions/wholesale';
 import WholesaleShop from '@/components/wholesale/WholesaleShop';
+import WholesaleInventory from '@/components/wholesale/WholesaleInventory';
 
-/** Portal mayorista (lado agencia). Registro/estado + tienda (catálogo + compra en lote) si aprobada. */
+/** Portal mayorista (lado agencia). Registro/estado + tienda (catálogo + compra en lote) e inventario si aprobada. */
 export default function WholesalePortal({ agency, catalog }: { agency: MyAgency | null; catalog: WholesalePlan[] }) {
   const router = useRouter();
+  const [tab, setTab] = useState<'shop' | 'inventory'>('shop');
 
   if (!agency) return <RegisterForm onDone={() => router.refresh()} />;
   if (agency.status === 'pending')
@@ -16,16 +18,26 @@ export default function WholesalePortal({ agency, catalog }: { agency: MyAgency 
   if (agency.status === 'suspended')
     return <Notice tone="zinc" icon={<Ban className="h-7 w-7" />} title="Cuenta suspendida" text="Tu cuenta de agencia está suspendida temporalmente. Escribinos para reactivarla." />;
 
-  // approved → tienda mayorista
+  // approved → tienda + inventario
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          <strong className="text-zinc-700 dark:text-zinc-200">{agency.companyName}</strong> · precios mayoristas{agency.customMarginPct !== null ? ` (margen ${agency.customMarginPct}%)` : ''}
-        </p>
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <strong className="text-zinc-700 dark:text-zinc-200">{agency.companyName}</strong> · precios mayoristas{agency.customMarginPct !== null ? ` (margen ${agency.customMarginPct}%)` : ''}
+      </p>
+      <div className="flex gap-2">
+        <Tab active={tab === 'shop'} onClick={() => setTab('shop')} icon={<ShoppingCart className="h-4 w-4" />} label="Comprar" />
+        <Tab active={tab === 'inventory'} onClick={() => setTab('inventory')} icon={<Package className="h-4 w-4" />} label="Mi inventario" />
       </div>
-      <WholesaleShop catalog={catalog} />
+      {tab === 'shop' ? <WholesaleShop catalog={catalog} /> : <WholesaleInventory agencyId={agency.id} />}
     </div>
+  );
+}
+
+function Tab({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+  return (
+    <button onClick={onClick} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition cursor-pointer ${active ? 'bg-[#9933c1] text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300'}`}>
+      {icon} {label}
+    </button>
   );
 }
 
