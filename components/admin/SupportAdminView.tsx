@@ -6,7 +6,7 @@ import {
   HeadphonesIcon, BookOpen, HelpCircle, Send, Loader2, ArrowLeft, CheckCircle2, Plus, Trash2, Pencil, X, AlertTriangle,
 } from 'lucide-react';
 import {
-  getAdminTicket, replyToTicket, setTicketStatus, requestRefund,
+  getAdminTicket, replyToTicket, setTicketStatus, setTicketPriority, requestRefund,
   upsertKbArticle, deleteKbArticle, promoteUnresolvedToKb,
   type AdminTicketRow, type AdminTicketDetail, type AdminKbArticle, type UnresolvedQuery,
 } from '@/server/actions/admin-support';
@@ -118,6 +118,20 @@ function TicketDetail({ ticketId, onBack }: { ticketId: string; onBack: () => vo
             {t && <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${(STATUS[t.status] ?? STATUS.open).cls}`}>{(STATUS[t.status] ?? STATUS.open).label}</span>}
           </div>
           <div className="flex items-center gap-2">
+            {t && !closed && (
+              <select
+                value={t.priority}
+                onChange={(e) => act(() => setTicketPriority({ ticketId, priority: e.target.value as 'low' | 'normal' | 'high' | 'critical' }))}
+                disabled={busy}
+                title="Prioridad del caso"
+                className="rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-black/30 px-2 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-200 cursor-pointer"
+              >
+                <option value="low">Prioridad: Baja</option>
+                <option value="normal">Prioridad: Normal</option>
+                <option value="high">Prioridad: Alta</option>
+                <option value="critical">Prioridad: Crítica</option>
+              </select>
+            )}
             {!closed && <button onClick={() => act(() => requestRefund({ ticketId }))} disabled={busy} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 dark:border-amber-400/30 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-400/10 cursor-pointer disabled:opacity-50"><AlertTriangle className="h-3.5 w-3.5" /> Solicitar reembolso</button>}
             {!closed && <button onClick={() => act(() => setTicketStatus({ ticketId, status: 'resolved' }))} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-[#9933c1] hover:bg-[#7100a5] text-white px-2.5 py-1.5 text-xs font-bold cursor-pointer disabled:opacity-50"><CheckCircle2 className="h-3.5 w-3.5" /> Resolver</button>}
           </div>
@@ -183,16 +197,34 @@ function KbTab({ articles }: { articles: AdminKbArticle[] }) {
   );
 }
 
+const LANGS: Array<{ id: 'es' | 'en' | 'pt'; label: string }> = [
+  { id: 'es', label: 'Español' },
+  { id: 'en', label: 'English' },
+  { id: 'pt', label: 'Português' },
+];
+
 function KbEditor({ article, onClose, onSaved }: { article: AdminKbArticle | null; onClose: () => void; onSaved: () => void }) {
-  const [title, setTitle] = useState(article?.title ?? '');
-  const [content, setContent] = useState(article?.content ?? '');
+  const [tab, setTab] = useState<'es' | 'en' | 'pt'>('es');
+  const [es, setEs] = useState({ title: article?.title ?? '', content: article?.content ?? '' });
+  const [en, setEn] = useState({ title: article?.titleEn ?? '', content: article?.contentEn ?? '' });
+  const [pt, setPt] = useState({ title: article?.titlePt ?? '', content: article?.contentPt ?? '' });
   const [category, setCategory] = useState(article?.category ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const cur = tab === 'es' ? es : tab === 'en' ? en : pt;
+  const setCur = (v: { title: string; content: string }) => (tab === 'es' ? setEs(v) : tab === 'en' ? setEn(v) : setPt(v));
+  const filled = (x: { title: string; content: string }) => (x.title.trim() || x.content.trim() ? '●' : '');
+
   const save = async () => {
     setBusy(true); setError(null);
-    const res = await upsertKbArticle({ id: article?.id, title: title.trim(), content: content.trim(), category: category.trim() || undefined });
+    const res = await upsertKbArticle({
+      id: article?.id,
+      title: es.title.trim(), content: es.content.trim(),
+      titleEn: en.title.trim() || undefined, contentEn: en.content.trim() || undefined,
+      titlePt: pt.title.trim() || undefined, contentPt: pt.content.trim() || undefined,
+      category: category.trim() || undefined,
+    });
     setBusy(false);
     if (res.ok) onSaved(); else setError(res.error.message);
   };
@@ -203,13 +235,29 @@ function KbEditor({ article, onClose, onSaved }: { article: AdminKbArticle | nul
       <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-white/10 max-h-[90vh] overflow-y-auto">
         <button onClick={() => !busy && onClose()} className="absolute right-4 top-4 text-zinc-400 cursor-pointer"><X className="h-5 w-5" /></button>
         <h3 className="font-black text-lg text-zinc-900 dark:text-white mb-4">{article ? 'Editar artículo' : 'Nuevo artículo'}</h3>
-        <div className="space-y-3">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título" className="w-full px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30" />
-          <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Categoría (ej. instalacion)" className="w-full px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30" />
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={8} placeholder="Contenido del artículo…" className="w-full px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30 resize-none" />
+
+        <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Categoría (ej. instalacion)" className="w-full mb-3 px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30" />
+
+        {/* Pestañas de idioma */}
+        <div className="flex gap-1.5 mb-3">
+          {LANGS.map((l) => {
+            const data = l.id === 'es' ? es : l.id === 'en' ? en : pt;
+            return (
+              <button key={l.id} type="button" onClick={() => setTab(l.id)} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition cursor-pointer ${tab === l.id ? 'bg-[#9933c1] text-white' : 'bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-300'}`}>
+                {l.label} {l.id === 'es' ? <span className="opacity-60">*</span> : <span className="text-[#b3ff6b]">{filled(data)}</span>}
+              </button>
+            );
+          })}
         </div>
+
+        <div className="space-y-3">
+          <input value={cur.title} onChange={(e) => setCur({ ...cur, title: e.target.value })} placeholder={`Título (${tab.toUpperCase()})`} className="w-full px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30" />
+          <textarea value={cur.content} onChange={(e) => setCur({ ...cur, content: e.target.value })} rows={8} placeholder={`Contenido (${tab.toUpperCase()})…`} className="w-full px-3 py-2 text-sm bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-[#9933c1]/30 resize-none" />
+        </div>
+
+        <p className="text-[11px] text-zinc-400 mt-2">El <strong>Español</strong> es obligatorio (*). Inglés y Portugués son opcionales: si quedan vacíos, se muestra el español.</p>
         {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
-        <button onClick={save} disabled={busy || title.trim().length < 3 || content.trim().length < 10} className="mt-4 w-full rounded-xl bg-[#9933c1] hover:bg-[#7100a5] text-white font-bold py-2.5 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar</button>
+        <button onClick={save} disabled={busy || es.title.trim().length < 3 || es.content.trim().length < 10} className="mt-4 w-full rounded-xl bg-[#9933c1] hover:bg-[#7100a5] text-white font-bold py-2.5 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar</button>
       </div>
     </div>
   );

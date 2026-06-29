@@ -23,10 +23,11 @@ export interface KbArticle {
   category: string | null;
 }
 
-const searchSchema = z.object({ query: z.string().trim().min(2).max(200) });
+const searchSchema = z.object({ query: z.string().trim().min(2).max(200), lang: z.enum(['es', 'en', 'pt']).default('es') });
 
-/** Busca artículos de ayuda por texto (tolerante a tildes y typos). Pública (apta guests). */
-export async function searchKb(input: { query: string }): Promise<Result<KbArticle[]>> {
+/** Busca artículos de ayuda por texto (tolerante a tildes y typos), en el idioma
+ *  pedido (fallback ES). Pública (apta guests). */
+export async function searchKb(input: { query: string; lang?: 'es' | 'en' | 'pt' }): Promise<Result<KbArticle[]>> {
   const parsed = parseInput(searchSchema, input);
   if (!parsed.ok) return parsed;
 
@@ -34,6 +35,7 @@ export async function searchKb(input: { query: string }): Promise<Result<KbArtic
   const { data, error } = await supabase.rpc('search_kb' as never, {
     p_query: parsed.data.query,
     p_limit: 5,
+    p_lang: parsed.data.lang,
   } as never);
   if (error) {
     logger.error('searchKb falló', { error: error.message });

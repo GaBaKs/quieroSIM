@@ -703,25 +703,37 @@ export type Database = {
         Row: {
           category: string | null
           content: string
+          content_en: string | null
+          content_pt: string | null
           embedding: string | null
           id: string
           title: string
+          title_en: string | null
+          title_pt: string | null
           updated_at: string | null
         }
         Insert: {
           category?: string | null
           content: string
+          content_en?: string | null
+          content_pt?: string | null
           embedding?: string | null
           id?: string
           title: string
+          title_en?: string | null
+          title_pt?: string | null
           updated_at?: string | null
         }
         Update: {
           category?: string | null
           content?: string
+          content_en?: string | null
+          content_pt?: string | null
           embedding?: string | null
           id?: string
           title?: string
+          title_en?: string | null
+          title_pt?: string | null
           updated_at?: string | null
         }
         Relationships: []

@@ -192,6 +192,27 @@ export async function setTicketStatus(input: { ticketId: string; status: 'in_pro
   return ok(null);
 }
 
+const prioritySchema = z.object({ ticketId: z.string().uuid(), priority: z.enum(['low', 'normal', 'high', 'critical']) });
+
+/** El agente asigna la prioridad del caso (afecta el SLA mostrado y el orden). */
+export async function setTicketPriority(input: { ticketId: string; priority: 'low' | 'normal' | 'high' | 'critical' }): Promise<Result<null>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(prioritySchema, input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  // SLA según prioridad: critical 2h, high 8h, normal 24h, low 72h.
+  const hours = parsed.data.priority === 'critical' ? 2 : parsed.data.priority === 'high' ? 8 : parsed.data.priority === 'normal' ? 24 : 72;
+  const sla = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+  const { error } = await supabase.from('support_ticket').update({ priority: parsed.data.priority, sla_deadline: sla }).eq('id', parsed.data.ticketId);
+  if (error) {
+    logger.error('setTicketPriority falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos cambiar la prioridad.');
+  }
+  revalidatePath('/admin/support');
+  return ok(null);
+}
+
 // ── Reembolso: iniciar (soporte) / aprobar (super_admin) — RF-SUP-05 ─────────
 
 const refundReqSchema = z.object({ ticketId: z.string().uuid(), reason: z.string().trim().max(500).optional() });
@@ -227,6 +248,10 @@ export interface AdminKbArticle {
   id: string;
   title: string;
   content: string;
+  titleEn: string | null;
+  contentEn: string | null;
+  titlePt: string | null;
+  contentPt: string | null;
   category: string | null;
   updatedAt: string | null;
 }
@@ -235,28 +260,60 @@ export async function getKbArticles(): Promise<Result<AdminKbArticle[]>> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from('kb_article').select('id, title, content, category, updated_at').order('updated_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('kb_article')
+    .select('id, title, content, title_en, content_en, title_pt, content_pt, category, updated_at')
+    .order('updated_at', { ascending: false });
   if (error) {
     logger.error('getKbArticles falló', { error: error.message });
     return err(ErrorCodes.INTERNAL, 'No pudimos cargar la base de conocimiento.');
   }
-  return ok((data ?? []).map((a) => ({ id: a.id, title: a.title, content: a.content, category: a.category, updatedAt: a.updated_at })));
+  return ok(
+    (data ?? []).map((a) => ({
+      id: a.id,
+      title: a.title,
+      content: a.content,
+      titleEn: a.title_en,
+      contentEn: a.content_en,
+      titlePt: a.title_pt,
+      contentPt: a.content_pt,
+      category: a.category,
+      updatedAt: a.updated_at,
+    })),
+  );
 }
 
 const upsertKbSchema = z.object({
   id: z.string().uuid().optional(),
+  // ES es el idioma base (obligatorio); EN/PT opcionales.
   title: z.string().trim().min(3).max(200),
   content: z.string().trim().min(10).max(20000),
+  titleEn: z.string().trim().max(200).optional(),
+  contentEn: z.string().trim().max(20000).optional(),
+  titlePt: z.string().trim().max(200).optional(),
+  contentPt: z.string().trim().max(20000).optional(),
   category: z.string().trim().max(60).optional(),
 });
 
-export async function upsertKbArticle(input: { id?: string; title: string; content: string; category?: string }): Promise<Result<{ id: string }>> {
+export async function upsertKbArticle(input: {
+  id?: string; title: string; content: string;
+  titleEn?: string; contentEn?: string; titlePt?: string; contentPt?: string; category?: string;
+}): Promise<Result<{ id: string }>> {
   const guard = await requireAdmin();
   if (!guard.ok) return guard;
   const parsed = parseInput(upsertKbSchema, input);
   if (!parsed.ok) return parsed;
   const supabase = await createSupabaseServerClient();
-  const row = { title: parsed.data.title, content: parsed.data.content, category: parsed.data.category ?? null, updated_at: new Date().toISOString() };
+  const row = {
+    title: parsed.data.title,
+    content: parsed.data.content,
+    title_en: parsed.data.titleEn || null,
+    content_en: parsed.data.contentEn || null,
+    title_pt: parsed.data.titlePt || null,
+    content_pt: parsed.data.contentPt || null,
+    category: parsed.data.category ?? null,
+    updated_at: new Date().toISOString(),
+  };
   const q = parsed.data.id
     ? supabase.from('kb_article').update(row).eq('id', parsed.data.id).select('id').single()
     : supabase.from('kb_article').insert(row).select('id').single();
