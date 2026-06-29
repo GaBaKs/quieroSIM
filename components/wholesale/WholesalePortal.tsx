@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Loader2, Clock, Ban, ShoppingCart, Package } from 'lucide-react';
+import { Building2, Loader2, Clock, Ban, ShoppingCart, Package, FileText } from 'lucide-react';
 import { registerAgency, type MyAgency, type WholesalePlan } from '@/server/actions/wholesale';
 import WholesaleShop from '@/components/wholesale/WholesaleShop';
 import WholesaleInventory from '@/components/wholesale/WholesaleInventory';
+import WholesaleBatches from '@/components/wholesale/WholesaleBatches';
 
 /** Portal mayorista (lado agencia). Registro/estado + tienda (catálogo + compra en lote) e inventario si aprobada. */
 export default function WholesalePortal({ agency, catalog }: { agency: MyAgency | null; catalog: WholesalePlan[] }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'shop' | 'inventory'>('shop');
+  const [tab, setTab] = useState<'shop' | 'inventory' | 'batches'>('shop');
 
   if (!agency) return <RegisterForm onDone={() => router.refresh()} />;
   if (agency.status === 'pending')
@@ -24,11 +25,14 @@ export default function WholesalePortal({ agency, catalog }: { agency: MyAgency 
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
         <strong className="text-zinc-700 dark:text-zinc-200">{agency.companyName}</strong> · precios mayoristas{agency.customMarginPct !== null ? ` (margen ${agency.customMarginPct}%)` : ''}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Tab active={tab === 'shop'} onClick={() => setTab('shop')} icon={<ShoppingCart className="h-4 w-4" />} label="Comprar" />
         <Tab active={tab === 'inventory'} onClick={() => setTab('inventory')} icon={<Package className="h-4 w-4" />} label="Mi inventario" />
+        <Tab active={tab === 'batches'} onClick={() => setTab('batches')} icon={<FileText className="h-4 w-4" />} label="Mis lotes" />
       </div>
-      {tab === 'shop' ? <WholesaleShop catalog={catalog} /> : <WholesaleInventory agencyId={agency.id} />}
+      {tab === 'shop' && <WholesaleShop catalog={catalog} />}
+      {tab === 'inventory' && <WholesaleInventory agencyId={agency.id} />}
+      {tab === 'batches' && <WholesaleBatches />}
     </div>
   );
 }

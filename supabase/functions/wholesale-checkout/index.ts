@@ -40,6 +40,14 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
   if (!agency || agency.status !== 'approved') return fail('FORBIDDEN', 'No sos una agencia aprobada.', 403);
 
+  // Rate limit por agencia (anti-abuso): 10 checkouts por minuto.
+  const { data: allowed } = await supabase.rpc('rate_limit_hit', {
+    p_bucket: `wholesale:${userData.user.id}`,
+    p_max: 10,
+    p_window_seconds: 60,
+  });
+  if (allowed === false) return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento.', 429);
+
   let body: { items?: Array<{ planId?: string; qty?: number }> };
   try {
     body = await req.json();

@@ -235,3 +235,78 @@ export async function resendAssignedQr(input: { esimId: string }): Promise<Resul
   if (!res.ok) return res;
   return ok(null);
 }
+
+// ── Lotes + factura + export (M5) ────────────────────────────────────────────
+
+export interface WholesaleBatchRow {
+  id: string;
+  status: string;
+  itemCount: number;
+  total: number;
+  invoiceNumber: string | null;
+  createdAt: string | null;
+  paidAt: string | null;
+  delivered: number;
+}
+
+export async function getMyBatches(): Promise<Result<WholesaleBatchRow[]>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('agency_my_batches' as never);
+  if (error) {
+    logger.error('getMyBatches falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos cargar tus lotes.');
+  }
+  const rows = (data ?? []) as Array<{ id: string; status: string; item_count: number; total: number | string; invoice_number: string | null; created_at: string | null; paid_at: string | null; delivered: number }>;
+  return ok(rows.map((b) => ({
+    id: b.id, status: b.status, itemCount: b.item_count, total: Number(b.total),
+    invoiceNumber: b.invoice_number, createdAt: b.created_at, paidAt: b.paid_at, delivered: Number(b.delivered),
+  })));
+}
+
+export interface InvoiceData {
+  batch: { id: string; invoice_number: string | null; total_wholesale_usd: number; currency: string; paid_at: string | null; item_count: number };
+  agency: { company_name: string; tax_id: string | null; billing_address: string | null };
+  items: Array<{ plan: string; qty: number; unit: number; subtotal: number }>;
+}
+
+export async function getBatchInvoice(input: { batchId: string }): Promise<Result<InvoiceData>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(z.object({ batchId: z.string().uuid() }), input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('agency_batch_invoice' as never, { p_batch_id: parsed.data.batchId } as never);
+  if (error || !data) {
+    logger.error('getBatchInvoice falló', { error: error?.message });
+    return err(ErrorCodes.NOT_FOUND, 'No pudimos cargar la factura.');
+  }
+  return ok(data as unknown as InvoiceData);
+}
+
+export interface BatchQrRow {
+  planName: string;
+  iccid: string | null;
+  qrLpa: string | null;
+  iosTapLink: string | null;
+  assignedClientEmail: string | null;
+  statusQr: string | null;
+}
+
+export async function getBatchQrs(input: { batchId: string }): Promise<Result<BatchQrRow[]>> {
+  const guard = await requireAgency();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(z.object({ batchId: z.string().uuid() }), input);
+  if (!parsed.ok) return parsed;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc('agency_batch_qrs' as never, { p_batch_id: parsed.data.batchId } as never);
+  if (error) {
+    logger.error('getBatchQrs falló', { error: error.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos cargar los QR del lote.');
+  }
+  const rows = (data ?? []) as Array<{ plan_name: string; iccid: string | null; qr_lpa: string | null; ios_tap_link: string | null; assigned_client_email: string | null; status_qr: string | null }>;
+  return ok(rows.map((e) => ({
+    planName: e.plan_name, iccid: e.iccid, qrLpa: e.qr_lpa, iosTapLink: e.ios_tap_link, assignedClientEmail: e.assigned_client_email, statusQr: e.status_qr,
+  })));
+}
