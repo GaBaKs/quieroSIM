@@ -151,6 +151,7 @@ export type Database = {
           approved_at: string | null
           billing_address: string | null
           company_name: string
+          custom_margin_pct: number | null
           id: string
           status: string | null
           tax_id: string | null
@@ -160,6 +161,7 @@ export type Database = {
           approved_at?: string | null
           billing_address?: string | null
           company_name: string
+          custom_margin_pct?: number | null
           id?: string
           status?: string | null
           tax_id?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           approved_at?: string | null
           billing_address?: string | null
           company_name?: string
+          custom_margin_pct?: number | null
           id?: string
           status?: string | null
           tax_id?: string | null
