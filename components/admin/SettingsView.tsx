@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield, DollarSign } from 'lucide-react';
+import { Percent, Users, Save, ShieldCheck, UserPlus, Trash2, Shield, DollarSign, Mail } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
 import PricingPolicyEditor from '@/components/admin/PricingPolicyEditor';
@@ -17,7 +17,7 @@ import {
   type PricingPolicy,
 } from '@/server/actions/admin-settings';
 
-type Tab = 'margins' | 'pricing' | 'affiliates' | 'admins';
+type Tab = 'margins' | 'pricing' | 'affiliates' | 'notifications' | 'admins';
 type SubRole = 'super_admin' | 'support_agent';
 
 const inputCls =
@@ -37,6 +37,8 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
     commissionL2Pct: String(settings.commissionL2Pct),
     minWithdrawalUsd: String(settings.minWithdrawalUsd),
     affiliateCouponDiscountPct: String(settings.affiliateCouponDiscountPct),
+    salesNotifyEmail: settings.salesNotifyEmail,
+    claimsNotifyEmail: settings.claimsNotifyEmail,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -55,6 +57,8 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
       commissionL2Pct: Number(form.commissionL2Pct),
       minWithdrawalUsd: Number(form.minWithdrawalUsd),
       affiliateCouponDiscountPct: Number(form.affiliateCouponDiscountPct),
+      salesNotifyEmail: form.salesNotifyEmail.trim(),
+      claimsNotifyEmail: form.claimsNotifyEmail.trim(),
     });
     setSaving(false);
     if (res.ok) {
@@ -98,6 +102,7 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
     { label: 'Márgenes y alertas', value: 'margins', icon: Percent },
     { label: 'Política de precios', value: 'pricing', icon: DollarSign },
     { label: 'Afiliados', value: 'affiliates', icon: Users },
+    { label: 'Notificaciones', value: 'notifications', icon: Mail },
     { label: 'Administradores', value: 'admins', icon: Shield },
   ];
 
@@ -170,6 +175,24 @@ export default function SettingsView({ settings, admins, policy }: { settings: P
             <label className={labelCls}>Descuento de cupones de afiliado (%)</label>
             <input type="number" value={form.affiliateCouponDiscountPct} onChange={(e) => set('affiliateCouponDiscountPct', e.target.value)} className={inputCls} min="0" max="100" />
             <p className="text-xs text-zinc-400 mt-1">Default para los cupones de afiliados nuevos. El de cada afiliado se puede ajustar en su panel.</p>
+          </div>
+          {SaveButton}
+        </motion.div>
+      )}
+
+      {/* Notificaciones */}
+      {tab === 'notifications' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cardCls}>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Avisos automáticos por email. Dejá un campo vacío para desactivar ese aviso.</p>
+          <div>
+            <label className={labelCls}>Email para avisos de venta</label>
+            <input type="email" value={form.salesNotifyEmail} onChange={(e) => set('salesNotifyEmail', e.target.value)} className={inputCls} placeholder="ventas@quierosim.com" />
+            <p className="text-xs text-zinc-400 mt-1">Recibe un email cada vez que se concreta una venta (orden pagada).</p>
+          </div>
+          <div>
+            <label className={labelCls}>Email para avisos de reclamos</label>
+            <input type="email" value={form.claimsNotifyEmail} onChange={(e) => set('claimsNotifyEmail', e.target.value)} className={inputCls} placeholder="soporte@quierosim.com" />
+            <p className="text-xs text-zinc-400 mt-1">Recibe un email cada vez que un cliente abre un caso/reclamo de soporte.</p>
           </div>
           {SaveButton}
         </motion.div>

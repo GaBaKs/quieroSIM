@@ -24,6 +24,10 @@ export interface PlatformSettings {
   minWithdrawalUsd: number;
   /** Descuento default de los cupones de afiliado nuevos (%). */
   affiliateCouponDiscountPct: number;
+  /** Email que recibe aviso de cada venta (vacío = desactivado). */
+  salesNotifyEmail: string;
+  /** Email que recibe aviso de cada reclamo/caso de soporte (vacío = desactivado). */
+  claimsNotifyEmail: string;
 }
 
 export interface AdminAccount {
@@ -43,6 +47,8 @@ function mapSettings(d: Record<string, unknown>): PlatformSettings {
     commissionL2Pct: Number(d.commission_l2_pct ?? 0),
     minWithdrawalUsd: Number(d.min_withdrawal_usd ?? 0),
     affiliateCouponDiscountPct: Number(d.affiliate_coupon_discount_pct ?? 10),
+    salesNotifyEmail: (d.sales_notify_email as string | null) ?? '',
+    claimsNotifyEmail: (d.claims_notify_email as string | null) ?? '',
   };
 }
 
@@ -67,6 +73,8 @@ const settingsSchema = z.object({
   commissionL2Pct: z.number().min(0).max(100),
   minWithdrawalUsd: z.number().min(0).max(100000),
   affiliateCouponDiscountPct: z.number().min(0).max(100),
+  salesNotifyEmail: z.union([z.literal(''), z.string().trim().email()]),
+  claimsNotifyEmail: z.union([z.literal(''), z.string().trim().email()]),
 });
 
 export async function updateSettings(input: PlatformSettings): Promise<Result<PlatformSettings>> {
@@ -87,6 +95,8 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
       commission_l2_pct: s.commissionL2Pct,
       min_withdrawal_usd: s.minWithdrawalUsd,
       affiliate_coupon_discount_pct: s.affiliateCouponDiscountPct,
+      sales_notify_email: s.salesNotifyEmail || null,
+      claims_notify_email: s.claimsNotifyEmail || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1);

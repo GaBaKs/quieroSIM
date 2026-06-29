@@ -1072,6 +1072,7 @@ export type Database = {
       platform_settings: {
         Row: {
           affiliate_coupon_discount_pct: number
+          claims_notify_email: string | null
           commission_l1_pct: number | null
           commission_l2_pct: number | null
           default_margin_pct: number | null
@@ -1080,11 +1081,13 @@ export type Database = {
           id: number
           min_withdrawal_usd: number | null
           price_alert_threshold_pct: number | null
+          sales_notify_email: string | null
           updated_at: string | null
           wholesale_margin_pct: number | null
         }
         Insert: {
           affiliate_coupon_discount_pct?: number
+          claims_notify_email?: string | null
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
@@ -1093,11 +1096,13 @@ export type Database = {
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
+          sales_notify_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }
         Update: {
           affiliate_coupon_discount_pct?: number
+          claims_notify_email?: string | null
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
@@ -1106,6 +1111,7 @@ export type Database = {
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
+          sales_notify_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }
