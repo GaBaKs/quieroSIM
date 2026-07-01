@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, UserPlus, Send, Loader2, X, Copy, Search, CheckCircle2, Clock } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Package, UserPlus, Send, Loader2, X, Copy, Search, CheckCircle2, Clock, QrCode } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getMyInventory, assignEsim, resendAssignedQr, type InventoryEsim } from '@/server/actions/wholesale';
 
@@ -20,6 +21,8 @@ export default function WholesaleInventory({ agencyId }: { agencyId: string }) {
   const [assignTarget, setAssignTarget] = useState<InventoryEsim | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState<InventoryEsim | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = async () => {
@@ -49,7 +52,7 @@ export default function WholesaleInventory({ agencyId }: { agencyId: string }) {
     setBusyId(esimId);
     const res = await resendAssignedQr({ esimId });
     setBusyId(null);
-    if (!res.ok) alert(res.error.message);
+    if (!res.ok) setErrorModal(res.error.message);
   };
 
   if (items === null) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-zinc-300" /></div>;
@@ -109,11 +112,16 @@ export default function WholesaleInventory({ agencyId }: { agencyId: string }) {
                       <p className="text-[11px] text-[#9933c1] dark:text-[#b3ff6b] mt-0.5">→ {e.assignedClientName ? `${e.assignedClientName} · ` : ''}{e.assignedClientEmail}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     {e.qrLpa && (
-                      <button onClick={() => copy(e.qrLpa!, e.id)} title="Copiar código de activación (LPA)" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer">
-                        <Copy className="h-3.5 w-3.5" /> {copied === e.id ? 'Copiado ✓' : 'QR'}
-                      </button>
+                      <>
+                        <button onClick={() => setQrOpen(e)} title="Ver código QR" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                          <QrCode className="h-3.5 w-3.5" /> Ver QR
+                        </button>
+                        <button onClick={() => copy(e.qrLpa!, e.id)} title="Copiar código de asignación (LPA)" className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                          <Copy className="h-3.5 w-3.5" /> {copied === e.id ? 'Copiado ✓' : 'Código'}
+                        </button>
+                      </>
                     )}
                     {e.inventoryStatus === 'unassigned' ? (
                       <button onClick={() => setAssignTarget(e)} className="inline-flex items-center gap-1 rounded-lg bg-[#9933c1] hover:bg-[#7100a5] text-white px-2.5 py-1.5 text-xs font-bold cursor-pointer">
@@ -134,6 +142,67 @@ export default function WholesaleInventory({ agencyId }: { agencyId: string }) {
       )}
 
       <AssignModal target={assignTarget} onClose={() => setAssignTarget(null)} onDone={() => { setAssignTarget(null); load(); }} />
+
+      {/* Modal de error custom para límite de reenvíos u otros errores */}
+      <AnimatePresence>
+        {errorModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setErrorModal(null)} />
+            <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 p-6 text-center shadow-xl">
+              <button onClick={() => setErrorModal(null)} className="absolute right-3 top-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer transition-colors"><X className="h-5 w-5" /></button>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 mb-4">
+                <Clock className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="font-black text-lg text-zinc-900 dark:text-white mb-2">Aviso</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">{errorModal}</p>
+              <button onClick={() => setErrorModal(null)} className="w-full rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold py-2.5 cursor-pointer hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors">
+                Entendido
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal QR */}
+      <AnimatePresence>
+        {qrOpen && qrOpen.qrLpa && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setQrOpen(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 p-6 text-center shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setQrOpen(null)}
+                className="absolute right-3 top-3 rounded-full p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <h3 className="font-black text-lg text-zinc-900 dark:text-white mb-4">{qrOpen.planName ?? 'eSIM'}</h3>
+              
+              <div className="inline-block rounded-xl border border-zinc-200 bg-white p-3 shadow-inner mb-4">
+                <QRCodeSVG value={qrOpen.qrLpa} size={200} className="mx-auto" />
+              </div>
+              
+              <div className="space-y-1 mt-2">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Código Manual
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copy(qrOpen.qrLpa!, qrOpen.id)}
+                  className="inline-flex max-w-full items-center gap-2 overflow-x-auto rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 hover:border-[#9933c1] transition-colors cursor-pointer"
+                >
+                  <span className="break-all text-left">{qrOpen.qrLpa}</span>
+                  {copied === qrOpen.id ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" /> : <Copy className="h-3.5 w-3.5 shrink-0 text-zinc-400" />}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
