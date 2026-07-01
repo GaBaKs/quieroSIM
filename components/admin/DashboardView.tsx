@@ -69,7 +69,7 @@ export default function DashboardView({
 
   const services: Array<{ name: string; key: keyof SystemHealth }> = [
     { name: 'Stripe', key: 'stripe' },
-
+    { name: 'Yesim API', key: 'yesim' },
     { name: 'Resend (email)', key: 'resend' },
   ];
 
