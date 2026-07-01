@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
 import QuieroButton from '@/components/ui/QuieroButton';
@@ -12,7 +12,6 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Turnstile, { type TurnstileHandle } from '@/components/Turnstile';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
   const mounted = useMounted();
@@ -48,8 +47,11 @@ function LoginForm() {
       );
       return;
     }
-    router.replace('/admin');
-    router.refresh();
+    // Navegación DURA: garantiza que el servidor vea la cookie recién escrita
+    // (evita el bug de "apretar F5"; el replace+refresh tenía un race).
+    const next = searchParams.get('next');
+    const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+    window.location.assign(safeNext ?? '/admin');
   };
 
   return (
@@ -127,13 +129,12 @@ function LoginForm() {
         </div>
 
         <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => router.push('/')}
+          <Link
+            href="/"
             className="text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
           >
             &larr; Volver a la web pública
-          </button>
+          </Link>
         </div>
       </div>
     </div>

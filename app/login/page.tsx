@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
 import QuieroButton from '@/components/ui/QuieroButton';
@@ -14,7 +14,6 @@ import GoogleButton from '@/components/GoogleButton';
 
 /** Login del usuario final (RF-AUTH-01) — Google OAuth se suma cuando haya credenciales. */
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
 
@@ -58,14 +57,16 @@ function LoginForm() {
       .from('admin_profile')
       .select('id')
       .eq('user_id', authData.user.id)
-      .single();
+      .maybeSingle();
 
-    if (adminData) {
-      router.replace('/admin');
-    } else {
-      router.replace('/account');
-    }
-    router.refresh();
+    // Destino: ?next=<ruta relativa> si es seguro, si no /admin o /account.
+    const next = searchParams.get('next');
+    const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+    const dest = safeNext ?? (adminData ? '/admin' : '/account');
+    // Navegación DURA a propósito: garantiza que el servidor vea la cookie de
+    // sesión recién escrita (evita el bug de "apretar F5"). El router.replace +
+    // router.refresh tenía un race con el Router Cache.
+    window.location.assign(dest);
   };
 
   return (

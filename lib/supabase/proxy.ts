@@ -39,24 +39,30 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Redirect que PRESERVA las cookies refrescadas por getUser() (rotación de
+  // token / limpieza de sesión). Sin esto, el redirect descartaba las cookies
+  // nuevas y el cliente quedaba desincronizado hasta un reload duro (F5).
+  const redirectPreservingCookies = (pathname: string): NextResponse => {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    url.search = '';
+    const redirect = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  };
+
   const path = request.nextUrl.pathname;
   const isAdminRoute = path === '/admin' || path.startsWith('/admin/');
   const isPublicAdminRoute = PUBLIC_ADMIN_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 
   if (isAdminRoute && !isPublicAdminRoute && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/admin/login';
-    url.search = '';
-    return NextResponse.redirect(url);
+    return redirectPreservingCookies('/admin/login');
   }
 
   // Panel del usuario final ("Mis eSIMs"): exige sesión, sin chequeo de rol.
   const isAccountRoute = path === '/account' || path.startsWith('/account/');
   if (isAccountRoute && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    url.search = '';
-    return NextResponse.redirect(url);
+    return redirectPreservingCookies('/login');
   }
 
   return supabaseResponse;
