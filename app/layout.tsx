@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: 'QuieroSIM | Internet para viajar | Conéctate al instante en 190+ Países',
   description: 'Adquiere tu tarjeta eSIM virtual prepago en USD con activación inmediata por código QR. Internet móvil sin roaming y soporte 24/7 de QUIERO LLC.',
   metadataBase: new URL('https://quierosim.com'),
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
