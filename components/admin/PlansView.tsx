@@ -140,7 +140,7 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
             <thead>
               <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/30">
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
-                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Costo (EUR)</th>
+                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Costo (USD)</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Margen</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Precio final</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Mayorista</th>
@@ -158,7 +158,7 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
                     </div>
                     <div className="text-xs text-zinc-400 truncate max-w-[220px] sm:max-w-[320px]">{countryLabel(p)} · {dataLabel(p)} · {p.durationDays ?? '—'}d</div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">{p.costEur !== null ? `€${p.costEur}` : '—'}</td>
+                  <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">{p.costEur !== null ? usd(p.costEur * eurUsdRate) : '—'}</td>
                   <td className="py-3 px-4 text-sm text-zinc-600 dark:text-zinc-300">
                     {p.useFixedPrice ? <span className="text-zinc-400 italic">fijo</span> : p.marginPct !== null ? `${p.marginPct}%` : '—'}
                   </td>
@@ -363,7 +363,7 @@ function PriceEditor({ plan, eurUsdRate, roundPsychological, onClose, onSaved }:
             <X className="h-4 w-4" />
           </button>
           <h3 className="font-bold text-lg text-zinc-900 dark:text-white pr-6">{plan.name}</h3>
-          <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? `€${plan.costEur}` : '—'}</p>
+          <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? usd(plan.costEur * eurUsdRate) : '—'}</p>
 
           <div className="mt-5 space-y-4">
             <div>
@@ -486,7 +486,7 @@ function WholesalePriceEditor({ plan, eurUsdRate, roundPsychological, globalMarg
             <Building2 className="h-5 w-5 text-[#9933c1] dark:text-[#b3ff6b] shrink-0" />
             <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Precio mayorista · {plan.name}</h3>
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? `€${plan.costEur}` : '—'}</p>
+          <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? usd(plan.costEur * eurUsdRate) : '—'}</p>
 
           <div className="mt-5 space-y-4">
             <div>
