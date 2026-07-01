@@ -1,13 +1,14 @@
 import { getPlansAdmin } from '@/server/actions/admin-plans';
-import { getPricingPolicy } from '@/server/actions/admin-settings';
+import { getPricingPolicy, getSettings } from '@/server/actions/admin-settings';
 import { getAuthContext } from '@/server/lib/auth';
 import PlansView from '@/components/admin/PlansView';
 
 /** Gestión de planes y precios. Server component. */
 export default async function AdminPlansPage() {
-  const [result, ctx, policyRes] = await Promise.all([getPlansAdmin(), getAuthContext(), getPricingPolicy()]);
+  const [result, ctx, policyRes, settingsRes] = await Promise.all([getPlansAdmin(), getAuthContext(), getPricingPolicy(), getSettings()]);
   const isSuperAdmin = ctx?.adminSubRole === 'super_admin';
   const policy = policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, groups: [] };
+  const wholesaleMarginPct = settingsRes.ok ? settingsRes.data.wholesaleMarginPct : 15;
 
   return (
     <div className="space-y-6">
@@ -23,7 +24,7 @@ export default async function AdminPlansPage() {
       {!result.ok ? (
         <p className="text-sm text-red-500 bg-red-50 dark:bg-red-400/10 rounded-xl p-4">{result.error.message}</p>
       ) : (
-        <PlansView plans={result.data} isSuperAdmin={isSuperAdmin} eurUsdRate={policy.eurUsdRate} roundPsychological={policy.roundPsychological} />
+        <PlansView plans={result.data} isSuperAdmin={isSuperAdmin} eurUsdRate={policy.eurUsdRate} roundPsychological={policy.roundPsychological} wholesaleMarginPct={wholesaleMarginPct} />
       )}
     </div>
   );

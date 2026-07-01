@@ -42,11 +42,17 @@
     "supabase/functions/sync-catalog",
     "supabase/functions/sync-devices",
     "supabase/functions/checkout",
+    "supabase/functions/checkout-test",
+    "supabase/functions/wholesale-checkout",
+    "supabase/functions/wholesale-checkout-test",
     "supabase/functions/stripe-webhook",
+    "supabase/functions/stripe-webhook-test",
     "supabase/functions/deliveries",
     "supabase/functions/yesim-webhook",
     "supabase/functions/admin-health",
     "supabase/functions/whatsapp-send",
-    "supabase/functions/admin-users"
+    "supabase/functions/admin-users",
+    "supabase/functions/notify",
+    "supabase/functions/_shared/services/fulfillment.ts"
   ]
 }

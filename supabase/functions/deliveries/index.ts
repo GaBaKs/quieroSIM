@@ -105,5 +105,39 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, data: result.data });
   }
 
+  // ── /assign-send: la agencia envía el QR al cliente final asignado ──────────
+  if (route === 'assign-send') {
+    const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (!token) return fail('UNAUTHORIZED', 'Falta sesión.', 401);
+    const { data: userData } = await supabase.auth.getUser(token);
+    if (!userData.user) return fail('UNAUTHORIZED', 'Sesión inválida.', 401);
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return fail('VALIDATION', 'Body JSON inválido.');
+    }
+    const { esimId } = body as { esimId?: string };
+    if (!esimId) return fail('VALIDATION', 'Falta esimId.');
+    // La eSIM debe ser de una agencia aprobada del usuario y estar asignada.
+    const { data: esim } = await supabase
+      .from('esim')
+      .select('id, assigned_client_email, agency_profile_id, agency_profile:agency_profile_id(user_id, status)')
+      .eq('id', esimId)
+      .maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    const ap = esim && (Array.isArray((esim as any).agency_profile) ? (esim as any).agency_profile[0] : (esim as any).agency_profile);
+    if (!esim || !ap || ap.user_id !== userData.user.id || ap.status !== 'approved') {
+      return fail('NOT_FOUND', 'eSIM no encontrada en tu inventario.', 404);
+    }
+    if (!esim.assigned_client_email) return fail('VALIDATION', 'La eSIM no tiene un cliente asignado.');
+    const result = await sendQrDelivery(esim.id, makeDeps(supabase), { manual: true, toEmail: esim.assigned_client_email });
+    if (!result.ok) {
+      const status = result.error.code === 'DELIVERY_RESEND_LIMIT' ? 429 : 502;
+      return fail(result.error.code, result.error.message, status);
+    }
+    return json({ ok: true, data: result.data });
+  }
+
   return new Response('not found', { status: 404 });
 });

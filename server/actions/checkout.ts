@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 import { err, ok, type Result } from '../types/result';
 import { ErrorCodes } from '../lib/errors';
 import { parseInput } from '../lib/validation';
@@ -23,6 +24,14 @@ const createCheckoutSchema = z.object({
   lang: z.enum(['ES', 'EN', 'PT']).default('ES'),
   /** Código de cupón opcional (se valida de nuevo server-side). */
   couponCode: z.string().trim().max(40).optional(),
+  /** El comprador (afiliado) quiere pagar con su crédito de plataforma (aplica el máximo). */
+  useCredit: z.boolean().optional(),
+  /**
+   * Monto de crédito a aplicar (USD). Si se envía, el server aplica ESE monto
+   * (acotado a [0, saldo, total]) en vez del máximo. La regla A6.1 igual manda:
+   * el remanente a Stripe nunca cae en (0, 0.50).
+   */
+  creditToApply: z.number().nonnegative().optional(),
   /**
    * Precio (base, en USD) que el cliente vio al abrir el checkout. El server lo
    * compara con el precio actual de la BD; si difiere (el admin lo cambió en el
@@ -46,7 +55,13 @@ export interface PriceChanged {
   newPriceUsd: number;
 }
 
-export type CheckoutResult = CheckoutSession | PriceChanged;
+/** Orden gratis (cupón 'free' o total cubierto): no pasa por Stripe, ya se emite la eSIM. */
+export interface FreeOrder {
+  free: true;
+  orderId: string;
+}
+
+export type CheckoutResult = CheckoutSession | PriceChanged | FreeOrder;
 
 const previewCouponSchema = z.object({
   code: z.string().trim().min(1).max(40),
@@ -58,10 +73,20 @@ export interface CouponPreview {
   finalPrice: number;
   /** true si el descuento bajó del mínimo de Stripe (US$0,50) y se cobra el mínimo. */
   minChargeApplied: boolean;
+  /** true si el cupón es gratis / cubre el 100% → no pasa por Stripe. */
+  isFree: boolean;
 }
 
 /** Cobro mínimo de Stripe (USD). No se puede cobrar menos que esto. */
 const MIN_CHARGE_USD = 0.5;
+
+/**
+ * Nombre de la Edge Function de checkout. En producción es 'checkout' (Stripe
+ * live). En local, seteando CHECKOUT_FN_NAME=checkout-test en .env.local, se
+ * apunta a la función espejo que usa STRIPE_SECRET_KEY_TEST (Stripe test) sin
+ * tocar producción. Vercel no define la variable → siempre usa 'checkout'.
+ */
+const CHECKOUT_FN = process.env.CHECKOUT_FN_NAME ?? 'checkout';
 
 const orderStatusSchema = z.object({
   orderId: z.string().uuid(),
@@ -114,14 +139,18 @@ async function callEdgeFunction<T>(path: string, body: unknown): Promise<Result<
 export async function createCheckout(input: CreateCheckoutInput): Promise<Result<CheckoutResult>> {
   const parsed = parseInput(createCheckoutSchema, input);
   if (!parsed.ok) return parsed;
-  return callEdgeFunction<CheckoutResult>('checkout/create', parsed.data);
+  // Referido de afiliado: viene de la cookie qs_aff (server-side, no del cliente).
+  // El Edge resuelve y valida el afiliado; acá solo lo reenviamos.
+  const aff = (await cookies()).get('qs_aff')?.value;
+  const affiliateRef = aff && /^[A-Za-z0-9_-]{1,64}$/.test(aff) ? aff : undefined;
+  return callEdgeFunction<CheckoutResult>(`${CHECKOUT_FN}/create`, { ...parsed.data, affiliateRef });
 }
 
 /** Estado de la orden para el polling post-pago (valida orderId+email — apto guests). */
 export async function getOrderStatus(input: { orderId: string; email: string }): Promise<Result<OrderStatusInfo>> {
   const parsed = parseInput(orderStatusSchema, input);
   if (!parsed.ok) return parsed;
-  return callEdgeFunction<OrderStatusInfo>('checkout/status', parsed.data);
+  return callEdgeFunction<OrderStatusInfo>(`${CHECKOUT_FN}/status`, parsed.data);
 }
 
 /**
@@ -158,11 +187,13 @@ export async function previewCoupon(input: { code: string; planId: string }): Pr
     logger.error('previewCoupon falló', { error: error.message });
     return err(ErrorCodes.INTERNAL, 'No pudimos validar el cupón. Intentá de nuevo.');
   }
-  const v = data as { valid?: boolean; discount?: number; reason?: string } | null;
+  const v = data as { valid?: boolean; discount?: number; is_free?: boolean; reason?: string } | null;
   if (!v?.valid) return err('COUPON_INVALID', v?.reason ?? 'El cupón no es válido.');
 
   const discount = Number(v.discount ?? 0);
   const raw = Math.max(0, subtotal - discount);
-  const finalPrice = raw < MIN_CHARGE_USD ? MIN_CHARGE_USD : raw;
-  return ok({ discount, finalPrice, minChargeApplied: raw < MIN_CHARGE_USD });
+  const isFree = v.is_free === true || raw === 0;
+  // Gratis → finalPrice 0 (no pasa por Stripe). Si no, aplica el piso de Stripe.
+  const finalPrice = isFree ? 0 : raw < MIN_CHARGE_USD ? MIN_CHARGE_USD : raw;
+  return ok({ discount, finalPrice, minChargeApplied: !isFree && raw < MIN_CHARGE_USD, isFree });
 }

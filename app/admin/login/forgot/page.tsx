@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
-            <Turnstile onToken={setCaptchaToken} />
+            <Turnstile onToken={setCaptchaToken} theme={mounted ? theme : 'dark'} />
             <QuieroButton
               variant="secondary"
               type="submit"

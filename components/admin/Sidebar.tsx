@@ -33,10 +33,9 @@ const navigation = [
   { name: 'Usuarios', href: '/admin/users', icon: Users },
   { name: 'Planes', href: '/admin/plans', icon: Globe2 },
   { name: 'Cupones', href: '/admin/coupons', icon: Ticket },
-  { name: 'Afiliados (por hacer)', href: '/admin/affiliates', icon: Network },
-  { name: 'Mayoristas (por hacer)', href: '/admin/wholesale', icon: Building2 },
-  { name: 'Soporte (por hacer)', href: '/admin/support', icon: HeadphonesIcon },
-
+  { name: 'Afiliados', href: '/admin/affiliates', icon: Network },
+  { name: 'Mayoristas', href: '/admin/wholesale', icon: Building2 },
+  { name: 'Soporte', href: '/admin/support', icon: HeadphonesIcon },
   { name: 'Reportes', href: '/admin/reports', icon: BarChart3, superAdminOnly: true },
   { name: 'Configuración', href: '/admin/settings', icon: Settings, superAdminOnly: true },
 ];
@@ -71,8 +70,8 @@ export default function Sidebar({
     <>
       {/* Mobile Backdrop */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/60 dark:bg-black/80 backdrop-blur-sm lg:hidden transition-opacity" 
+        <div
+          className="fixed inset-0 z-40 bg-black/60 dark:bg-black/80 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -90,7 +89,7 @@ export default function Sidebar({
             <Link href="/admin" className="scale-90 origin-left">
               <Logo isDark={mounted ? theme === 'dark' : true} />
             </Link>
-            <button 
+            <button
               className="lg:hidden text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
               onClick={() => setIsOpen(false)}
             >

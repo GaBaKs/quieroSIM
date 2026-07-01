@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Smartphone, HelpCircle, X, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { Smartphone, HelpCircle, X, ShieldCheck, LifeBuoy, Users, Building2 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import { useAccountTheme } from './AccountThemeProvider';
 import AccountLogout from './AccountLogout';
 
 const navigation = [
   { name: 'Mis eSIMs', href: '/account', icon: Smartphone, exact: true },
-  { name: 'Ayuda y Soporte (por hacer)', href: '/account/support', icon: LifeBuoy },
+  { name: 'Afiliados', href: '/account/affiliate', icon: Users },
+  { name: 'Ayuda y Soporte', href: '/account/support', icon: LifeBuoy },
   { name: 'Preguntas Frecuentes', href: '/account/faq', icon: HelpCircle },
 ];
 
@@ -18,10 +19,12 @@ export default function AccountSidebar({
   isOpen,
   setIsOpen,
   isAdmin,
+  hasWholesaleRole,
 }: {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
   isAdmin: boolean;
+  hasWholesaleRole: boolean;
 }) {
   const pathname = usePathname();
   const { theme } = useAccountTheme();
@@ -78,6 +81,22 @@ export default function AccountSidebar({
                 </Link>
               );
             })}
+            
+                        {hasWholesaleRole && (
+              <Link
+                href="/account/wholesale"
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors",
+                  pathname.startsWith('/account/wholesale')
+                    ? "bg-[#9933c1]/10 dark:bg-[#9933c1]/20 text-[#9933c1] dark:text-[#b3ff6b]"
+                    : "text-slate-500 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-zinc-100"
+                )}
+              >
+                <Building2 className={cn("h-5 w-5", pathname.startsWith('/account/wholesale') ? "text-[#9933c1] dark:text-[#b3ff6b]" : "text-slate-400 dark:text-zinc-500")} />
+                Mayorista
+              </Link>
+            )}
             
             {isAdmin && (
               <div className="pt-4 mt-4 border-t border-slate-200 dark:border-white/10">

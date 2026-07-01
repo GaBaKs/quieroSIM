@@ -3,13 +3,14 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Pencil, RotateCcw, Star, X, LayoutGrid, List } from 'lucide-react';
+import { Loader2, Pencil, RotateCcw, Star, X, LayoutGrid, List, Building2 } from 'lucide-react';
 import { usd } from './format';
-import { updatePlanPricing, setPlanStatus, setPlanRecommended, clearFixedPrice, type AdminPlanRow } from '@/server/actions/admin-plans';
+import { updatePlanPricing, updateWholesalePricing, setPlanStatus, setPlanRecommended, clearFixedPrice, type AdminPlanRow } from '@/server/actions/admin-plans';
 
-export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsychological }: { plans: AdminPlanRow[]; isSuperAdmin: boolean; eurUsdRate: number; roundPsychological: boolean }) {
+export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsychological, wholesaleMarginPct }: { plans: AdminPlanRow[]; isSuperAdmin: boolean; eurUsdRate: number; roundPsychological: boolean; wholesaleMarginPct: number }) {
   const router = useRouter();
   const [editing, setEditing] = useState<AdminPlanRow | null>(null);
+  const [editingW, setEditingW] = useState<AdminPlanRow | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [recId, setRecId] = useState<string | null>(null);
   const [clearId, setClearId] = useState<string | null>(null);
@@ -142,6 +143,7 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Costo (EUR)</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Margen</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Precio final</th>
+                <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Mayorista</th>
                 <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Estado</th>
                 {isSuperAdmin && <th className="py-3 px-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Acciones</th>}
               </tr>
@@ -170,6 +172,16 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
                       ) : null}
                     </span>
                   </td>
+                  <td className="py-3 px-4 text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                    <span className="inline-flex items-center gap-1.5">
+                      {p.priceWholesale !== null ? usd(p.priceWholesale) : '—'}
+                      {p.useWholesaleFixedPrice ? (
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" title="Precio mayorista fijo">Fijo</span>
+                      ) : p.useWholesaleCustomMargin ? (
+                        <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300" title="Margen mayorista propio del plan">Margen</span>
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
                       p.status === 'active'
@@ -195,6 +207,13 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
                           className="flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:border-[#9933c1]/50 transition cursor-pointer"
                         >
                           <Pencil className="h-3.5 w-3.5" /> Precio
+                        </button>
+                        <button
+                          onClick={() => setEditingW(p)}
+                          title="Editar precio mayorista de este plan"
+                          className="flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:border-[#9933c1]/50 transition cursor-pointer"
+                        >
+                          <Building2 className="h-3.5 w-3.5" /> Mayorista
                         </button>
                         {(p.useFixedPrice || p.useCustomMargin) && (
                           <button
@@ -238,17 +257,29 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
                 <div className="text-xs text-zinc-500 mb-3">
                   {countryLabel(p)} · {dataLabel(p)} · {p.durationDays ?? '—'}d
                 </div>
-                <div className="flex items-center gap-2 mb-4 mt-auto">
-                  <span className="text-sm font-black text-zinc-900 dark:text-white">{p.priceFinal !== null ? usd(p.priceFinal) : '—'}</span>
-                  {p.useFixedPrice && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">Fijo</span>}
-                  {p.useCustomMargin && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300">Margen</span>}
+                <div className="mb-4 mt-auto space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-zinc-900 dark:text-white">{p.priceFinal !== null ? usd(p.priceFinal) : '—'}</span>
+                    {p.useFixedPrice && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">Fijo</span>}
+                    {p.useCustomMargin && <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300">Margen</span>}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    <Building2 className="h-3 w-3" /> Mayorista: <span className="font-bold text-zinc-700 dark:text-zinc-200">{p.priceWholesale !== null ? usd(p.priceWholesale) : '—'}</span>
+                    {p.useWholesaleFixedPrice && <span className="rounded px-1 py-0.5 text-[8px] font-black uppercase bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">Fijo</span>}
+                    {p.useWholesaleCustomMargin && <span className="rounded px-1 py-0.5 text-[8px] font-black uppercase bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300">Margen</span>}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between border-t border-zinc-200 dark:border-white/10 pt-3">
                   {isSuperAdmin ? (
                     <>
-                      <button onClick={() => setEditing(p)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition cursor-pointer">
-                        <Pencil className="h-3.5 w-3.5" /> Editar
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setEditing(p)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition cursor-pointer">
+                          <Pencil className="h-3.5 w-3.5" /> Editar
+                        </button>
+                        <button onClick={() => setEditingW(p)} className="flex items-center gap-1.5 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-[#9933c1] dark:hover:text-[#b3ff6b] transition cursor-pointer">
+                          <Building2 className="h-3.5 w-3.5" /> Mayorista
+                        </button>
+                      </div>
                       <button onClick={() => toggleStatus(p)} disabled={togglingId === p.id} className={`flex items-center justify-center text-xs font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-50 cursor-pointer min-w-[85px] ${p.status === 'active' ? 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10' : 'border-[#b3ff6b]/50 text-green-700 hover:bg-[#b3ff6b]/10 dark:text-[#b3ff6b] dark:hover:bg-[#b3ff6b]/20'}`}>
                         {togglingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : p.status === 'active' ? 'Desactivar' : 'Activar'}
                       </button>
@@ -273,6 +304,7 @@ export default function PlansView({ plans, isSuperAdmin, eurUsdRate, roundPsycho
       )}
 
       {editing && <PriceEditor plan={editing} eurUsdRate={eurUsdRate} roundPsychological={roundPsychological} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); router.refresh(); }} />}
+      {editingW && <WholesalePriceEditor plan={editingW} eurUsdRate={eurUsdRate} roundPsychological={roundPsychological} globalMarginPct={wholesaleMarginPct} onClose={() => setEditingW(null)} onSaved={() => { setEditingW(null); router.refresh(); }} />}
     </>
   );
 }
@@ -372,6 +404,130 @@ function PriceEditor({ plan, eurUsdRate, roundPsychological, onClose, onSaved }:
 
             <div className="rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 p-3 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wide text-zinc-400">Precio final estimado</span>
+              <span className="text-lg font-black text-[#9933c1] dark:text-[#b3ff6b]">{usd(Math.round(preview * 100) / 100)}</span>
+            </div>
+
+            {error && <p className="text-sm font-medium text-red-500 bg-red-50 dark:bg-red-400/10 rounded-lg p-2.5">{error}</p>}
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button onClick={() => !busy && onClose()} disabled={busy} className="rounded-xl px-4 py-2 text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition disabled:opacity-50 cursor-pointer">Cancelar</button>
+            <button onClick={save} disabled={busy} className="flex items-center gap-2 rounded-xl bg-[#9933c1] hover:bg-[#7100a5] px-4 py-2 text-sm font-black text-white transition disabled:opacity-60 cursor-pointer">
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
+/**
+ * Editor de PRECIO MAYORISTA por plan. Espejo del retail con 3 modos:
+ *  - auto: margen mayorista global (Configuración → Márgenes)
+ *  - margin: margen propio del plan
+ *  - fixed: precio mayorista fijo en USD
+ * El precio fijo gana sobre el margen negociado de cada agencia; el margen de
+ * agencia (si tiene) reemplaza al global/propio en runtime.
+ */
+function WholesalePriceEditor({ plan, eurUsdRate, roundPsychological, globalMarginPct, onClose, onSaved }: {
+  plan: AdminPlanRow;
+  eurUsdRate: number;
+  roundPsychological: boolean;
+  globalMarginPct: number;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const initialMode: 'auto' | 'margin' | 'fixed' = plan.useWholesaleFixedPrice ? 'fixed' : plan.useWholesaleCustomMargin ? 'margin' : 'auto';
+  const [mode, setMode] = useState<'auto' | 'margin' | 'fixed'>(initialMode);
+  const [margin, setMargin] = useState(String(plan.wholesaleMarginPct ?? globalMarginPct));
+  const [fixed, setFixed] = useState(String(plan.wholesalePriceFixed ?? plan.priceWholesale ?? ''));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const round = (x: number) =>
+    roundPsychological ? Math.floor(x) + (x - Math.floor(x) <= 0.49 ? 0.49 : 0.99) : Math.round(x * 100) / 100;
+  const marginForPreview = mode === 'auto' ? globalMarginPct : Number(margin) || 0;
+  const preview =
+    mode === 'fixed'
+      ? Number(fixed) || 0
+      : plan.costEur !== null
+        ? round(plan.costEur * (1 + marginForPreview / 100) * eurUsdRate)
+        : plan.priceWholesale ?? 0;
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    const r = await updateWholesalePricing({
+      planId: plan.id,
+      mode,
+      marginPct: mode === 'margin' ? Number(margin) : undefined,
+      priceFixed: mode === 'fixed' ? Number(fixed) : undefined,
+    });
+    setBusy(false);
+    if (r.ok) onSaved();
+    else setError(r.error.message);
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => !busy && onClose()}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          className="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={() => !busy && onClose()} className="absolute right-3 top-3 rounded-full p-1 text-zinc-400 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-2 pr-6">
+            <Building2 className="h-5 w-5 text-[#9933c1] dark:text-[#b3ff6b] shrink-0" />
+            <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Precio mayorista · {plan.name}</h3>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1">Costo del proveedor: {plan.costEur !== null ? `€${plan.costEur}` : '—'}</p>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-zinc-500 mb-1.5">Cómo se calcula el precio mayorista</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([['auto', 'Margen global'], ['margin', 'Margen %'], ['fixed', 'Precio fijo']] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setMode(v)}
+                    className={`rounded-xl border px-2 py-2 text-xs font-bold transition cursor-pointer ${
+                      mode === v
+                        ? 'border-[#9933c1] bg-[#9933c1]/10 text-[#9933c1] dark:text-[#b3ff6b]'
+                        : 'border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-[#9933c1]/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {mode === 'auto' && (
+              <p className="text-xs text-zinc-400">Usa el margen mayorista global ({globalMarginPct}%, editable en Configuración → Márgenes). Se recalcula al guardar.</p>
+            )}
+            {mode === 'margin' && (
+              <div>
+                <label className="block text-xs font-bold text-zinc-500 mb-1.5">Margen mayorista (%) — solo para este plan</label>
+                <input type="number" min="0" step="1" value={margin} onChange={(e) => setMargin(e.target.value)} className={editorInput} />
+              </div>
+            )}
+            {mode === 'fixed' && (
+              <div>
+                <label className="block text-xs font-bold text-zinc-500 mb-1.5">Precio mayorista fijo (USD)</label>
+                <input type="number" min="0" step="0.01" value={fixed} onChange={(e) => setFixed(e.target.value)} className={editorInput} />
+                <p className="text-[11px] text-zinc-400 mt-1.5">El precio fijo aplica a todas las agencias (gana sobre el margen negociado individual).</p>
+              </div>
+            )}
+
+            <div className="rounded-xl bg-zinc-50 dark:bg-black/30 border border-zinc-100 dark:border-white/5 p-3 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide text-zinc-400">Precio mayorista de lista</span>
               <span className="text-lg font-black text-[#9933c1] dark:text-[#b3ff6b]">{usd(Math.round(preview * 100) / 100)}</span>
             </div>
 

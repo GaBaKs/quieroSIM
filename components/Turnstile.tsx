@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 /**
  * Widget de Cloudflare Turnstile (CAPTCHA, Fase 12). Renderiza el desafío y
@@ -24,9 +24,32 @@ declare global {
 const SCRIPT_ID = 'cf-turnstile-script';
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
-export default function Turnstile({ onToken }: { onToken: (token: string) => void }) {
+export interface TurnstileHandle {
+  /** Reinicia el widget y descarta el token actual. Los tokens de Turnstile son
+   *  de un solo uso: tras un intento fallido hay que resetear para obtener uno nuevo. */
+  reset: () => void;
+}
+
+/** Tema visual del widget. 'auto' sigue la preferencia del SO. */
+export type TurnstileTheme = 'light' | 'dark' | 'auto';
+
+const Turnstile = forwardRef<TurnstileHandle, { onToken: (token: string) => void; theme?: TurnstileTheme }>(
+  function Turnstile({ onToken, theme = 'auto' }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.reset(widgetIdRef.current);
+        } catch {
+          /* noop */
+        }
+      }
+      onToken('');
+    },
+  }));
 
   useEffect(() => {
     const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -37,6 +60,7 @@ export default function Turnstile({ onToken }: { onToken: (token: string) => voi
       if (cancelled || !window.turnstile || !containerRef.current || widgetIdRef.current) return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        theme,
         callback: (token: string) => onToken(token),
         'expired-callback': () => onToken(''),
         'error-callback': () => onToken(''),
@@ -74,7 +98,9 @@ export default function Turnstile({ onToken }: { onToken: (token: string) => voi
         widgetIdRef.current = null;
       }
     };
-  }, [onToken]);
+  }, [onToken, theme]);
 
   return <div ref={containerRef} className="flex justify-center" />;
-}
+});
+
+export default Turnstile;

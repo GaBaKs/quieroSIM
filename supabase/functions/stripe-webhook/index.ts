@@ -1,19 +1,14 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { createStripeGateway } from '../_shared/stripe/gateway.ts';
-import { createYesimClient } from '../_shared/yesim/client.ts';
-import { createYesimMock } from '../_shared/yesim/mock/handler.ts';
 import { runProvision } from '../_shared/services/provisioning.ts';
 import { createSupabaseProvisionStore } from '../_shared/services/provision-store-supabase.ts';
-import { createResendClient } from '../_shared/email/resend.ts';
-import { sendQrDelivery } from '../_shared/services/delivery.ts';
-import { createSupabaseDeliveryStore } from '../_shared/services/delivery-store-supabase.ts';
-import { createTwilioClient } from '../_shared/whatsapp/twilio.ts';
-import { sendWhatsappDelivery } from '../_shared/services/whatsapp-delivery.ts';
 import {
-  createSupabaseQrHosting,
-  createSupabaseWhatsappStore,
-} from '../_shared/services/whatsapp-delivery-store-supabase.ts';
+  makeYesim,
+  deliverQrForOrder,
+  deliverQrWhatsappForOrder,
+  startProvisionAndDeliver,
+} from '../_shared/services/fulfillment.ts';
 
 /**
  * Webhook de Stripe + reintento manual de provisión.
@@ -30,74 +25,6 @@ declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | unde
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-}
-
-function makeYesim() {
-  const baseUrl = Deno.env.get('YESIM_BASE_URL') ?? 'mock';
-  const token = Deno.env.get('YESIM_TOKEN') ?? 'mock-token';
-  const useMock = baseUrl === 'mock';
-  return createYesimClient({
-    baseUrl: useMock ? 'https://yesim.mock' : baseUrl,
-    token,
-    fetchFn: useMock ? createYesimMock({ token }).fetchHandler : undefined,
-  });
-}
-
-/**
- * Etapa 6: si la provisión terminó fulfilled, dispara el email con el QR.
- * Sin RESEND_API_KEY la entrega queda failed=RESEND_NOT_CONFIGURED y el cron
- * process-qr-deliveries la levanta cuando la key esté configurada.
- */
-// deno-lint-ignore no-explicit-any
-async function deliverQrForOrder(supabase: any, orderId: string): Promise<void> {
-  try {
-    const { data: esim } = await supabase.from('esim').select('id').eq('order_id', orderId).maybeSingle();
-    if (!esim) return;
-    const apiKey = Deno.env.get('RESEND_API_KEY');
-    await sendQrDelivery(esim.id, {
-      store: createSupabaseDeliveryStore(supabase),
-      email: apiKey
-        ? createResendClient({ apiKey, from: Deno.env.get('EMAIL_FROM') ?? 'QuieroSIM <onboarding@resend.dev>' })
-        : null,
-    });
-  } catch (e) {
-    // Jamás loguear el contenido del email (lleva el LPA); solo el motivo.
-    console.error('qr delivery error', e instanceof Error ? e.message : String(e));
-  }
-}
-
-/**
- * Segundo canal: si la orden tiene guest_phone, dispara el QR por WhatsApp
- * (Twilio). Solo se intenta cuando hay teléfono Y eSIM; sin secrets de Twilio el
- * transporte es null y la entrega queda failed para que el cron la levante. No
- * bloquea ni afecta al canal email ni a la emisión.
- */
-// deno-lint-ignore no-explicit-any
-async function deliverQrWhatsappForOrder(supabase: any, orderId: string): Promise<void> {
-  try {
-    const { data: order } = await supabase
-      .from('order')
-      .select('guest_phone, esim(id)')
-      .eq('id', orderId)
-      .maybeSingle();
-    const phone = (order?.guest_phone ?? '').trim();
-    const esim = Array.isArray(order?.esim) ? order?.esim[0] : order?.esim;
-    if (!phone || !esim) return; // sin teléfono o sin eSIM: no hay canal WhatsApp
-    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-    const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-    const from = Deno.env.get('TWILIO_WHATSAPP_FROM');
-    await sendWhatsappDelivery(esim.id, {
-      store: createSupabaseWhatsappStore(supabase),
-      media: createSupabaseQrHosting(supabase),
-      whatsapp:
-        accountSid && authToken && from
-          ? createTwilioClient({ accountSid, authToken, from })
-          : null,
-    });
-  } catch (e) {
-    // Jamás loguear el body/LPA/URL firmada; solo el motivo.
-    console.error('whatsapp delivery error', e instanceof Error ? e.message : String(e));
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -226,15 +153,53 @@ Deno.serve(async (req: Request) => {
 
   if (event.type === 'payment_intent.succeeded') {
     const intent = event.data.object as Stripe.PaymentIntent;
+    const batchId = intent.metadata?.wholesale_batch_id;
     const orderId = intent.metadata?.order_id;
-    if (orderId) {
+    if (batchId) {
+      // ── Camino lote mayorista ──────────────────────────────────────────────
+      // Candado de batch: pending→paid atómico (solo UNA ejecución lo logra).
+      const { data: batchPaid } = await supabase
+        .from('wholesale_batch')
+        .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_payment_intent_id: intent.id })
+        .eq('id', batchId)
+        .eq('status', 'pending')
+        .select('id');
+      if (batchPaid && batchPaid.length > 0) {
+        await supabase.rpc('assign_invoice_number', { p_batch_id: batchId });
+        // Marcar las órdenes del lote pending→paid y provisionar cada una (idempotente por ítem).
+        const { data: bOrders } = await supabase
+          .from('order')
+          .update({ status: 'paid' })
+          .eq('batch_id', batchId)
+          .eq('status', 'pending')
+          .select('id');
+        const batchOrders = bOrders ?? [];
+        for (const o of batchOrders) {
+          await supabase.from('provision_job').upsert({ order_id: o.id }, { onConflict: 'order_id', ignoreDuplicates: true });
+        }
+        // Provisión SECUENCIAL del lote: YeSim devuelve el MISMO iccid ante
+        // new_esim concurrentes del mismo plan → choca el unique(iccid) y la
+        // 2da queda failed_needs_review. Un solo new_esim a la vez lo evita.
+        // Una sola tarea de fondo para no demorar el 200 a Stripe.
+        const runBatch = (async () => {
+          for (const o of batchOrders) {
+            await startProvisionAndDeliver(supabase, o.id);
+          }
+        })();
+        if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(runBatch);
+        else await runBatch;
+        processingResult = 'batch_provision_started';
+      } else {
+        processingResult = 'batch_not_pending';
+      }
+    } else if (orderId) {
       // Candado 2: transición pending→paid atómica — solo UNA ejecución la logra.
       const { data: updated } = await supabase
         .from('order')
         .update({ status: 'paid' })
         .eq('id', orderId)
         .eq('status', 'pending')
-        .select('id, plan_id, coupon_id');
+        .select('id, plan_id, coupon_id, user_id, affiliate_credit_applied');
 
       if (updated && updated.length > 0) {
         // Candado de catálogo: si el plan se DESACTIVÓ entre la creación del PI
@@ -270,23 +235,24 @@ Deno.serve(async (req: Request) => {
           if (redeemErr) console.error('redeem_coupon error', redeemErr.message);
         }
 
+        // A6.1: crédito de afiliado aplicado al pago → asiento 'spent' (1 por orden).
+        const creditApplied = Number(updated[0].affiliate_credit_applied ?? 0);
+        if (creditApplied > 0 && updated[0].user_id) {
+          const { data: ba } = await supabase.from('affiliate_profile').select('id').eq('user_id', updated[0].user_id).maybeSingle();
+          if (ba) {
+            const { data: exists } = await supabase.from('affiliate_credit').select('id').eq('order_id', orderId).eq('movement_type', 'spent').maybeSingle();
+            if (!exists) {
+              await supabase.from('affiliate_credit').insert({ affiliate_profile_id: ba.id, movement_type: 'spent', amount: creditApplied, order_id: orderId });
+            }
+          }
+        }
+
         await supabase
           .from('provision_job')
           .upsert({ order_id: orderId }, { onConflict: 'order_id', ignoreDuplicates: true });
 
         // Responder rápido a Stripe; la emisión sigue en background.
-        const provision = runProvision(orderId, {
-          store: createSupabaseProvisionStore(supabase),
-          yesim: makeYesim(),
-        })
-          .then(async (r) => {
-            if (r.ok && r.data.state === 'fulfilled') {
-              await deliverQrForOrder(supabase, orderId);
-              await deliverQrWhatsappForOrder(supabase, orderId);
-            }
-          })
-          .catch((e) => console.error('provision error', e instanceof Error ? e.message : String(e)));
-
+        const provision = startProvisionAndDeliver(supabase, orderId);
         if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
           EdgeRuntime.waitUntil(provision);
         } else {

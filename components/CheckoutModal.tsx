@@ -12,6 +12,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { QRCodeSVG } from 'qrcode.react';
 import { createCheckout, getOrderStatus, previewCoupon, type CheckoutSession, type OrderStatusInfo } from '@/server/actions/checkout';
+import { getMyCreditBalance } from '@/server/actions/affiliates';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { checkoutLock } from '@/lib/checkout-lock';
 
@@ -30,6 +31,22 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   : null;
 
 type Step = 'form' | 'payment' | 'processing' | 'success';
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const MIN_CHARGE_USD = 0.5;
+
+/**
+ * Espejo cliente de la regla A6.1 (la fuente de verdad es la Edge). Dado el precio,
+ * el saldo y el monto pedido, devuelve cuánto crédito se aplica y cuánto va a Stripe,
+ * garantizando que el cargo de tarjeta sea $0 o ≥$0.50 (nunca la zona muerta).
+ */
+function creditPreview(price: number, balance: number, requested: number) {
+  let toApply = Math.min(Math.max(0, requested), balance, price);
+  const rem = round2(price - toApply);
+  if (rem > 0 && rem < MIN_CHARGE_USD) toApply = toApply >= price ? price : round2(price - MIN_CHARGE_USD);
+  toApply = round2(Math.max(0, toApply));
+  return { credit: toApply, card: round2(price - toApply) };
+}
 
 const POLL_INTERVAL_MS = 2500;
 const POLL_MAX_ATTEMPTS = 24; // ~60s; después mostramos "puede demorar" (§5.4, sin tono de error)
@@ -52,10 +69,14 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
   const [copied, setCopied] = useState(false);
   // Cupón (Etapa 8A)
   const [couponInput, setCouponInput] = useState('');
-  const [applied, setApplied] = useState<{ code: string; discount: number; finalPrice: number; minCharge: boolean } | null>(null);
+  const [applied, setApplied] = useState<{ code: string; discount: number; finalPrice: number; minCharge: boolean; isFree: boolean } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
+  // Crédito de afiliado del comprador (A6.1): si tiene, puede pagar con él.
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [useCredit, setUseCredit] = useState(false);
+  const [creditAmount, setCreditAmount] = useState(''); // cuánto crédito aplicar (USD)
   const pollCount = useRef(0);
 
   // ¿El comprador NO tiene sesión? Si tiene cuenta, conviene loguearse para que
@@ -65,8 +86,15 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     let active = true;
     createSupabaseBrowserClient()
       .auth.getUser()
-      .then(({ data }) => {
-        if (active) setIsGuest(!data.user);
+      .then(async ({ data }) => {
+        if (!active) return;
+        setIsGuest(!data.user);
+        if (data.user) {
+          const c = await getMyCreditBalance();
+          if (active) setCreditBalance(c);
+        } else {
+          setCreditBalance(0);
+        }
       });
     return () => {
       active = false;
@@ -99,6 +127,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
         setApplied(null);
         setCouponError(null);
         setCouponLoading(false);
+        setUseCredit(false);
         pollCount.current = 0;
       });
     }
@@ -168,7 +197,7 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
     const result = await previewCoupon({ code, planId: plan.id });
     setCouponLoading(false);
     if (result.ok) {
-      setApplied({ code: code.toUpperCase(), discount: result.data.discount, finalPrice: result.data.finalPrice, minCharge: result.data.minChargeApplied });
+      setApplied({ code: code.toUpperCase(), discount: result.data.discount, finalPrice: result.data.finalPrice, minCharge: result.data.minChargeApplied, isFree: result.data.isFree });
     } else {
       setApplied(null);
       setCouponError(result.error.message);
@@ -195,6 +224,9 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       acceptTerms: true,
       lang, // idioma del email con el QR
       couponCode: applied?.code, // cupón aplicado (se revalida server-side)
+      // Crédito de afiliado (A6.1): mandamos el monto elegido. El server lo acota.
+      useCredit: useCredit && creditBalance > 0 && Number(creditAmount) > 0,
+      creditToApply: useCredit && creditBalance > 0 && Number(creditAmount) > 0 ? round2(Number(creditAmount)) : undefined,
       // Precio que vio el cliente (control anti cambio en el medio). Al reconfirmar
       // se omite para aceptar el precio actual.
       expectedPriceUsd: acceptNewPrice ? undefined : plan.priceUSD,
@@ -208,6 +240,14 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
       // El precio cambió: mostramos el aviso y NO avanzamos al pago. El cliente
       // confirma con el botón (doCheckout(true)) o cierra.
       setPriceChanged(result.data.newPriceUsd);
+      return;
+    }
+    if ('free' in result.data) {
+      // Cupón gratis / total cubierto: no hay pago. La eSIM ya se está emitiendo;
+      // saltamos el Payment Element y vamos directo al paso de emisión (polea estado).
+      setPriceChanged(null);
+      setSession({ orderId: result.data.orderId, clientSecret: '', amountUsd: 0 });
+      setStep('processing');
       return;
     }
     setPriceChanged(null);
@@ -300,9 +340,13 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                   {applied ? (
                     <>
                       <div className="text-[10px] sm:text-xs text-slate-400 line-through font-sans">${plan.priceUSD} USD</div>
-                      <div className="text-slate-900 font-sans font-bold text-base sm:text-xl">
-                        ${applied.finalPrice.toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
-                      </div>
+                      {applied.isFree ? (
+                        <div className="text-green-700 font-sans font-black text-base sm:text-xl uppercase">{t('checkout.free')}</div>
+                      ) : (
+                        <div className="text-slate-900 font-sans font-bold text-base sm:text-xl">
+                          ${applied.finalPrice.toFixed(2)} <span className="text-[10px] sm:text-xs font-normal text-slate-500">USD</span>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
@@ -355,6 +399,49 @@ export default function CheckoutModal({ isOpen, onClose, plan, destinationName, 
                 )}
                 {couponError && <p className="text-red-500 text-[10px] flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {couponError}</p>}
               </div>
+
+              {/* Crédito de afiliado (A6.1): elegir cuánto del saldo aplicar */}
+              {creditBalance > 0 && !applied?.isFree && (() => {
+                const effectivePrice = applied ? applied.finalPrice : plan.priceUSD;
+                const maxCredit = round2(Math.min(creditBalance, effectivePrice));
+                const pv = creditPreview(effectivePrice, creditBalance, Number(creditAmount) || 0);
+                return (
+                  <div className="rounded-xl border border-[var(--color-violet)]/20 bg-[var(--color-violet)]/[0.04] px-3 py-2.5 space-y-2">
+                    <label className="flex items-center justify-between gap-2 cursor-pointer select-none">
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-700">
+                        {t('checkout.useCredit').replace('{amount}', creditBalance.toFixed(2))}
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={useCredit}
+                        onChange={(e) => { setUseCredit(e.target.checked); setCreditAmount(e.target.checked ? maxCredit.toFixed(2) : ''); }}
+                        className="h-4 w-4 rounded accent-[var(--color-violet)]"
+                      />
+                    </label>
+                    {useCredit && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500">US$</span>
+                          <input
+                            type="number" min="0" step="0.01" max={maxCredit}
+                            value={creditAmount}
+                            onChange={(e) => setCreditAmount(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-violet)]/20"
+                          />
+                          <button type="button" onClick={() => setCreditAmount(maxCredit.toFixed(2))} className="text-[11px] font-bold text-[var(--color-violet)] cursor-pointer">
+                            {t('checkout.creditMax')}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {pv.card === 0
+                            ? t('checkout.creditCoversAll').replace('{credit}', pv.credit.toFixed(2))
+                            : t('checkout.creditSplit').replace('{credit}', pv.credit.toFixed(2)).replace('{card}', pv.card.toFixed(2))}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="space-y-3">
                 <h4 className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('checkout.deliveryInfo')}</h4>

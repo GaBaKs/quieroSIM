@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
@@ -8,7 +8,7 @@ import QuieroButton from '@/components/ui/QuieroButton';
 import { MailCheck, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import Turnstile from '@/components/Turnstile';
+import Turnstile, { type TurnstileHandle } from '@/components/Turnstile';
 import GoogleButton from '@/components/GoogleButton';
 
 /**
@@ -25,6 +25,7 @@ function RegisterForm() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +54,22 @@ function RegisterForm() {
     });
     setSubmitting(false);
     if (signUpError) {
-      setError(t('auth.errorInvalid'));
+      // Token de Turnstile gastado en este intento → reset para el próximo.
+      turnstileRef.current?.reset();
+      // Mostrar el motivo real (no "email/contraseña incorrectos", que confunde en un alta).
+      const code = signUpError.code ?? '';
+      const msg = (signUpError.message ?? '').toLowerCase();
+      if (code === 'weak_password' || msg.includes('weak')) setError(t('auth.errorPasswordWeak'));
+      else if (code === 'email_address_invalid' || msg.includes('email') && msg.includes('invalid')) setError(t('auth.errorEmailInvalid'));
+      else if (code === 'user_already_exists' || code === 'email_exists') setError(t('auth.errorEmailTaken'));
+      else if (signUpError.status === 429 || code.includes('rate') || msg.includes('rate limit')) setError(t('auth.errorRateLimit'));
+      else if (msg.includes('captcha')) setError(t('auth.errorCaptcha'));
+      else setError(t('auth.errorInvalid'));
       return;
     }
     // Email ya registrado: Supabase devuelve un user "fantasma" sin identities.
     if (data.user && data.user.identities?.length === 0) {
+      turnstileRef.current?.reset();
       setError(t('auth.errorEmailTaken'));
       return;
     }
@@ -136,7 +148,7 @@ function RegisterForm() {
                 </p>
               )}
 
-              <Turnstile onToken={setCaptchaToken} />
+              <Turnstile ref={turnstileRef} onToken={setCaptchaToken} theme="light" />
 
               <div className="pt-4">
                 <QuieroButton

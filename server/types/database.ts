@@ -151,6 +151,7 @@ export type Database = {
           approved_at: string | null
           billing_address: string | null
           company_name: string
+          custom_margin_pct: number | null
           id: string
           status: string | null
           tax_id: string | null
@@ -160,6 +161,7 @@ export type Database = {
           approved_at?: string | null
           billing_address?: string | null
           company_name: string
+          custom_margin_pct?: number | null
           id?: string
           status?: string | null
           tax_id?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           approved_at?: string | null
           billing_address?: string | null
           company_name?: string
+          custom_margin_pct?: number | null
           id?: string
           status?: string | null
           tax_id?: string | null
@@ -579,6 +582,10 @@ export type Database = {
       esim: {
         Row: {
           agency_profile_id: string | null
+          assigned_at: string | null
+          assigned_client_email: string | null
+          assigned_client_name: string | null
+          inventory_status: string | null
           created_at: string | null
           data_left_mb: number | null
           data_package_mb: number | null
@@ -600,6 +607,10 @@ export type Database = {
         }
         Insert: {
           agency_profile_id?: string | null
+          assigned_at?: string | null
+          assigned_client_email?: string | null
+          assigned_client_name?: string | null
+          inventory_status?: string | null
           created_at?: string | null
           data_left_mb?: number | null
           data_package_mb?: number | null
@@ -621,6 +632,10 @@ export type Database = {
         }
         Update: {
           agency_profile_id?: string | null
+          assigned_at?: string | null
+          assigned_client_email?: string | null
+          assigned_client_name?: string | null
+          inventory_status?: string | null
           created_at?: string | null
           data_left_mb?: number | null
           data_package_mb?: number | null
@@ -703,25 +718,37 @@ export type Database = {
         Row: {
           category: string | null
           content: string
+          content_en: string | null
+          content_pt: string | null
           embedding: string | null
           id: string
           title: string
+          title_en: string | null
+          title_pt: string | null
           updated_at: string | null
         }
         Insert: {
           category?: string | null
           content: string
+          content_en?: string | null
+          content_pt?: string | null
           embedding?: string | null
           id?: string
           title: string
+          title_en?: string | null
+          title_pt?: string | null
           updated_at?: string | null
         }
         Update: {
           category?: string | null
           content?: string
+          content_en?: string | null
+          content_pt?: string | null
           embedding?: string | null
           id?: string
           title?: string
+          title_en?: string | null
+          title_pt?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -896,6 +923,10 @@ export type Database = {
           updated_at: string | null
           use_fixed_price: boolean | null
           use_custom_margin: boolean | null
+          use_wholesale_fixed_price: boolean
+          wholesale_price_fixed: number | null
+          use_wholesale_custom_margin: boolean
+          wholesale_margin_pct: number | null
         }
         Insert: {
           cost_provider_eur: number
@@ -908,6 +939,10 @@ export type Database = {
           updated_at?: string | null
           use_fixed_price?: boolean | null
           use_custom_margin?: boolean | null
+          use_wholesale_fixed_price?: boolean
+          wholesale_price_fixed?: number | null
+          use_wholesale_custom_margin?: boolean
+          wholesale_margin_pct?: number | null
         }
         Update: {
           cost_provider_eur?: number
@@ -920,6 +955,10 @@ export type Database = {
           updated_at?: string | null
           use_fixed_price?: boolean | null
           use_custom_margin?: boolean | null
+          use_wholesale_fixed_price?: boolean
+          wholesale_price_fixed?: number | null
+          use_wholesale_custom_margin?: boolean
+          wholesale_margin_pct?: number | null
         }
         Relationships: [
           {
@@ -1059,6 +1098,8 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          affiliate_coupon_discount_pct: number
+          claims_notify_email: string | null
           commission_l1_pct: number | null
           commission_l2_pct: number | null
           default_margin_pct: number | null
@@ -1067,10 +1108,13 @@ export type Database = {
           id: number
           min_withdrawal_usd: number | null
           price_alert_threshold_pct: number | null
+          sales_notify_email: string | null
           updated_at: string | null
           wholesale_margin_pct: number | null
         }
         Insert: {
+          affiliate_coupon_discount_pct?: number
+          claims_notify_email?: string | null
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
@@ -1079,10 +1123,13 @@ export type Database = {
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
+          sales_notify_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }
         Update: {
+          affiliate_coupon_discount_pct?: number
+          claims_notify_email?: string | null
           commission_l1_pct?: number | null
           commission_l2_pct?: number | null
           default_margin_pct?: number | null
@@ -1091,6 +1138,7 @@ export type Database = {
           id?: number
           min_withdrawal_usd?: number | null
           price_alert_threshold_pct?: number | null
+          sales_notify_email?: string | null
           updated_at?: string | null
           wholesale_margin_pct?: number | null
         }

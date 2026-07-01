@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
@@ -9,7 +9,7 @@ import { Lock } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { claimMyOrders } from '@/server/actions/esims';
-import Turnstile from '@/components/Turnstile';
+import Turnstile, { type TurnstileHandle } from '@/components/Turnstile';
 import GoogleButton from '@/components/GoogleButton';
 
 /** Login del usuario final (RF-AUTH-01) — Google OAuth se suma cuando haya credenciales. */
@@ -21,6 +21,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'invalid_link' ? t('auth.errorInvalidLink') : null,
@@ -38,9 +39,14 @@ function LoginForm() {
     });
     if (signInError || !authData.user) {
       setSubmitting(false);
-      setError(
-        signInError?.message === 'Email not confirmed' ? t('auth.errorUnconfirmed') : t('auth.errorInvalid'),
-      );
+      // El token de Turnstile es de un solo uso: lo gastó este intento, así que
+      // reseteamos el widget para que el próximo intento mande uno nuevo.
+      turnstileRef.current?.reset();
+      const msg = (signInError?.message ?? '').toLowerCase();
+      if (signInError?.message === 'Email not confirmed') setError(t('auth.errorUnconfirmed'));
+      else if (msg.includes('captcha')) setError(t('auth.errorCaptcha'));
+      else if (signInError?.status === 429 || msg.includes('rate limit')) setError(t('auth.errorRateLimit'));
+      else setError(t('auth.errorInvalid'));
       return;
     }
 
@@ -109,7 +115,7 @@ function LoginForm() {
             </p>
           )}
 
-          <Turnstile onToken={setCaptchaToken} />
+          <Turnstile ref={turnstileRef} onToken={setCaptchaToken} theme="light" />
 
           <div className="pt-4">
             <QuieroButton

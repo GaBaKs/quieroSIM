@@ -1,13 +1,18 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { createStripeGateway } from '../_shared/stripe/gateway.ts';
+import { startProvisionAndDeliver } from '../_shared/services/fulfillment.ts';
 
 /**
  * API de checkout (verify_jwt ON — exige anon JWT o sesión):
- *  POST /checkout/create  → orden 'pending' + PaymentIntent (precio desde BD).
+ *  POST /checkout/create  → orden 'pending' + PaymentIntent (precio desde BD), o
+ *                           camino pago-cero (cupón gratis / total cubierto) que
+ *                           NO pasa por Stripe y emite la eSIM directo.
  *  POST /checkout/status  → estado de la orden para el polling (orderId+email,
  *                           apto guests que no pueden leer por RLS).
  */
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -45,8 +50,8 @@ Deno.serve(async (req: Request) => {
       return fail('RATE_LIMITED', 'Demasiados intentos. Esperá un momento y probá de nuevo.', 429);
     }
 
-    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd } = body as {
-      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number;
+    const { planId, email, fullName, phone, acceptTerms, lang, couponCode, expectedPriceUsd, affiliateRef, useCredit, creditToApply } = body as {
+      planId?: string; email?: string; fullName?: string; phone?: string; acceptTerms?: boolean; lang?: string; couponCode?: string; expectedPriceUsd?: number; affiliateRef?: string; useCredit?: boolean; creditToApply?: number;
     };
     // Idioma del comprador: define el idioma del email con el QR (Etapa 6).
     const orderLang = lang && ['ES', 'EN', 'PT'].includes(lang) ? lang : 'ES';
@@ -93,6 +98,7 @@ Deno.serve(async (req: Request) => {
     let couponId: string | null = null;
     let discountApplied = 0;
     let finalUsd = priceUsd;
+    let isFreeCoupon = false;
     if (couponCode && couponCode.trim()) {
       const { data: cv } = await supabase.rpc('validate_coupon', {
         p_code: couponCode,
@@ -101,21 +107,141 @@ Deno.serve(async (req: Request) => {
         p_user_id: userId,
         p_email: email.toLowerCase(),
       });
-      const v = cv as { valid?: boolean; coupon_id?: string; discount?: number; reason?: string } | null;
+      const v = cv as { valid?: boolean; coupon_id?: string; discount?: number; is_free?: boolean; reason?: string } | null;
       if (!v?.valid) {
         return fail('COUPON_INVALID', v?.reason ?? 'El cupón no es válido.', 400);
       }
       couponId = v.coupon_id ?? null;
       discountApplied = Number(v.discount ?? 0);
+      isFreeCoupon = v.is_free === true;
       finalUsd = Math.max(0, priceUsd - discountApplied);
     }
-    // Stripe exige un cobro mínimo (~US$0,50). Si el descuento baja de ese piso,
-    // se cobra el mínimo (no se puede cobrar menos) y se ajusta el descuento real
-    // para que price_paid + discount_applied = precio del plan.
+
+    // Atribución de afiliado (A3): por cupón de afiliado (prioridad) o por link de
+    // referido (cookie qs_aff → affiliateRef). Solo afiliados 'approved' y nunca la
+    // propia compra del afiliado. Se guarda en order.affiliate_profile_id (L1); el
+    // L2 lo deriva el motor de comisiones desde referred_by_affiliate_id.
+    let affiliateProfileId: string | null = null;
+    if (couponId) {
+      const { data: cp } = await supabase.from('coupon').select('affiliate_profile_id').eq('id', couponId).maybeSingle();
+      if (cp?.affiliate_profile_id) {
+        const { data: ap } = await supabase.from('affiliate_profile').select('id, status, user_id').eq('id', cp.affiliate_profile_id).maybeSingle();
+        if (ap?.status === 'approved' && ap.user_id !== userId) affiliateProfileId = ap.id;
+      }
+    }
+    if (!affiliateProfileId && affiliateRef && /^[A-Za-z0-9_-]{1,64}$/.test(affiliateRef)) {
+      const { data: ap } = await supabase.from('affiliate_profile').select('id, status, user_id').eq('referral_link', affiliateRef).maybeSingle();
+      if (ap?.status === 'approved' && ap.user_id !== userId) affiliateProfileId = ap.id;
+    }
+
+    // Mínimo de cobro de Stripe (US$0,50). Lo usa la regla de crédito y el clamp final.
     const MIN_CHARGE_USD = 0.5;
+
+    // ── Crédito de afiliado del comprador (A6.1) ──────────────────────────────
+    // El comprador logueado puede pagar parte/todo con su crédito de plataforma.
+    // Regla del mínimo de Stripe: el remanente a cobrar nunca cae en (0, 0.50) —
+    // o $0 (sin Stripe) o ≥$0.50. El server recalcula SIEMPRE (no confía en el front).
+    let creditApplied = 0;
+    // El comprador quiere usar crédito si manda useCredit=true (máximo) o un
+    // creditToApply > 0 (monto elegido). El server decide el monto real.
+    const wantsCredit = useCredit === true || (typeof creditToApply === 'number' && creditToApply > 0);
+    if (wantsCredit && userId && finalUsd > 0) {
+      const { data: buyerAff } = await supabase.from('affiliate_profile').select('id').eq('user_id', userId).maybeSingle();
+      if (buyerAff) {
+        const { data: creditRows } = await supabase.from('affiliate_credit').select('movement_type, amount').eq('affiliate_profile_id', buyerAff.id);
+        const creditBalance = (creditRows ?? []).reduce(
+          (sum: number, r: { movement_type: string | null; amount: number | string }) =>
+            sum + (r.movement_type === 'spent' ? -Math.abs(Number(r.amount)) : Number(r.amount)),
+          0,
+        );
+        if (creditBalance > 0) {
+          // Monto deseado: el elegido por el comprador (acotado), o el máximo si no especificó.
+          const requested = typeof creditToApply === 'number' && creditToApply > 0
+            ? Math.min(creditToApply, creditBalance, finalUsd)
+            : Math.min(creditBalance, finalUsd);
+          let toApply = Math.round(requested * 100) / 100;
+          const remainder = Math.round((finalUsd - toApply) * 100) / 100;
+          if (remainder > 0 && remainder < MIN_CHARGE_USD) {
+            // Zona muerta (A6.1): o el crédito cubre todo (si el monto pedido alcanzaba),
+            // o se deja exactamente $0.50 a Stripe. Nunca un PaymentIntent de centavos.
+            toApply = toApply >= finalUsd ? finalUsd : Math.round((finalUsd - MIN_CHARGE_USD) * 100) / 100;
+          }
+          creditApplied = Math.round(toApply * 100) / 100;
+          finalUsd = Math.round((finalUsd - creditApplied) * 100) / 100;
+        }
+      }
+    }
+
+    // ── Camino pago-cero ──────────────────────────────────────────────────────
+    // Cupón 'free' o descuento que cubre el 100%: NO se cobra ni se crea
+    // PaymentIntent. Se crea la orden, se marca pagada y se emite la eSIM directo
+    // (mismo flujo que el webhook). Idempotencia: guard atómico + provision_job.
+    if (isFreeCoupon || finalUsd === 0) {
+      const { data: freeOrder, error: freeErr } = await supabase
+        .from('order')
+        .insert({
+          user_id: userId,
+          guest_email: email.toLowerCase(),
+          guest_phone: phone,
+          plan_id: plan.id,
+          price_paid: 0,
+          currency_sale: 'USD',
+          coupon_id: couponId,
+          affiliate_profile_id: affiliateProfileId,
+          affiliate_credit_applied: creditApplied,
+          discount_applied: discountApplied,
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          channel: 'web',
+          status: 'pending',
+          lang: orderLang,
+        })
+        .select('id')
+        .single();
+      if (freeErr || !freeOrder) return fail('INTERNAL', 'No pudimos crear la orden.', 500);
+
+      // Guard atómico pending→paid (sin cobro): solo UNA ejecución la logra.
+      const { data: paid } = await supabase
+        .from('order')
+        .update({ status: 'paid' })
+        .eq('id', freeOrder.id)
+        .eq('status', 'pending')
+        .select('id');
+      if (!paid || paid.length === 0) return fail('CONFLICT', 'La orden no se pudo confirmar.', 409);
+
+      if (couponId) {
+        const { error: redeemErr } = await supabase.rpc('redeem_coupon', { p_coupon_id: couponId, p_order_id: freeOrder.id });
+        if (redeemErr) console.error('redeem_coupon error', redeemErr.message);
+      }
+
+      // Asiento del crédito gastado (la orden ya quedó paid). Idempotente: 1 por orden.
+      if (creditApplied > 0 && userId) {
+        const { data: ba } = await supabase.from('affiliate_profile').select('id').eq('user_id', userId).maybeSingle();
+        if (ba) {
+          const { data: exists } = await supabase.from('affiliate_credit').select('id').eq('order_id', freeOrder.id).eq('movement_type', 'spent').maybeSingle();
+          if (!exists) {
+            await supabase.from('affiliate_credit').insert({ affiliate_profile_id: ba.id, movement_type: 'spent', amount: creditApplied, order_id: freeOrder.id });
+          }
+        }
+      }
+
+      await supabase.from('provision_job').upsert({ order_id: freeOrder.id }, { onConflict: 'order_id', ignoreDuplicates: true });
+
+      const provision = startProvisionAndDeliver(supabase, freeOrder.id);
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+        EdgeRuntime.waitUntil(provision);
+      } else {
+        await provision;
+      }
+
+      return json({ ok: true, data: { free: true, orderId: freeOrder.id } });
+    }
+    // Stripe exige un cobro mínimo (~US$0,50). Si tras cupón el monto baja de ese
+    // piso (sin crédito aplicado), se cobra el mínimo y se reajusta el descuento
+    // para que price_paid + discount_applied + crédito = precio del plan.
     if (finalUsd < MIN_CHARGE_USD) {
       finalUsd = MIN_CHARGE_USD;
-      discountApplied = Math.round((priceUsd - finalUsd) * 100) / 100;
+      discountApplied = Math.round((priceUsd - finalUsd - creditApplied) * 100) / 100;
     }
     const amountMinor = Math.round(finalUsd * 100);
 
@@ -130,6 +256,8 @@ Deno.serve(async (req: Request) => {
         price_paid: finalUsd,
         currency_sale: 'USD',
         coupon_id: couponId,
+        affiliate_profile_id: affiliateProfileId,
+        affiliate_credit_applied: creditApplied,
         discount_applied: discountApplied,
         terms_accepted: true,
         terms_accepted_at: new Date().toISOString(),

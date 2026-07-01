@@ -7,13 +7,24 @@ import { UserPlus, X, Loader2 } from 'lucide-react';
 import QuieroButton from '@/components/ui/QuieroButton';
 import { createUser } from '@/server/actions/admin-users';
 
-/** Crear usuario desde el panel (solo super_admin). Email + contraseña + rol. */
-export default function CreateUserDialog() {
+/** Crear usuario desde el panel (solo super_admin). Email + contraseña + rol.
+ *  Con `defaultRole`/`lockRole` sirve para crear directamente un afiliado. */
+export default function CreateUserDialog({
+  defaultRole = 'customer',
+  lockRole = false,
+  triggerLabel = 'Crear usuario',
+  title = 'Crear usuario',
+}: {
+  defaultRole?: string;
+  lockRole?: boolean;
+  triggerLabel?: string;
+  title?: string;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('customer');
+  const [role, setRole] = useState(defaultRole);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
@@ -23,7 +34,7 @@ export default function CreateUserDialog() {
     setOpen(false);
     setEmail('');
     setPassword('');
-    setRole('customer');
+    setRole(defaultRole);
     setError(null);
     setOkMsg(null);
   };
@@ -37,7 +48,7 @@ export default function CreateUserDialog() {
       setOkMsg(`Usuario ${email} creado.`);
       setEmail('');
       setPassword('');
-      setRole('customer');
+      setRole(defaultRole);
       router.refresh();
     } else {
       setError(res.error.message);
@@ -55,7 +66,7 @@ export default function CreateUserDialog() {
         onClick={() => setOpen(true)}
         className="text-sm py-2.5 px-4 flex items-center gap-2"
       >
-        <UserPlus className="h-4 w-4" /> Crear usuario
+        <UserPlus className="h-4 w-4" /> {triggerLabel}
       </QuieroButton>
 
       <AnimatePresence>
@@ -78,7 +89,7 @@ export default function CreateUserDialog() {
               >
                 <X className="h-4 w-4" />
               </button>
-              <h3 className="font-black text-lg text-zinc-900 dark:text-white pr-6 mb-4">Crear usuario</h3>
+              <h3 className="font-black text-lg text-zinc-900 dark:text-white pr-6 mb-4">{title}</h3>
 
               <div className="space-y-4">
                 <div>
@@ -89,15 +100,19 @@ export default function CreateUserDialog() {
                   <label className={labelCls}>Contraseña</label>
                   <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="mín. 8 · may + min + número" />
                 </div>
-                <div>
-                  <label className={labelCls}>Rol</label>
-                  <select value={role} onChange={(e) => setRole(e.target.value)} className={inputCls}>
-                    <option value="customer">Cliente</option>
-                    <option value="affiliate">Afiliado</option>
-                    <option value="agency">Agencia</option>
-                  </select>
-                  <p className="text-xs text-zinc-400 mt-1">El rol de administrador se otorga desde Configuración.</p>
-                </div>
+                {lockRole ? (
+                  <p className="text-xs text-zinc-400">Se crea como <strong className="text-[#9933c1] dark:text-[#b3ff6b]">afiliado aprobado</strong> (con link y cupón propios).</p>
+                ) : (
+                  <div>
+                    <label className={labelCls}>Rol</label>
+                    <select value={role} onChange={(e) => setRole(e.target.value)} className={inputCls}>
+                      <option value="customer">Cliente</option>
+                      <option value="affiliate">Afiliado</option>
+                      <option value="agency">Agencia</option>
+                    </select>
+                    <p className="text-xs text-zinc-400 mt-1">El rol de administrador se otorga desde Configuración.</p>
+                  </div>
+                )}
               </div>
 
               {error && <p className="mt-3 text-sm font-medium text-red-500 bg-red-50 dark:bg-red-400/10 rounded-lg p-2.5">{error}</p>}

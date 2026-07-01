@@ -19,10 +19,11 @@ export default async function AdminSettingsPage() {
         <SettingsView
           settings={settingsRes.ok ? settingsRes.data : {
             defaultMarginPct: 0, wholesaleMarginPct: 0, priceAlertThresholdPct: 0,
-            commissionL1Pct: 0, commissionL2Pct: 0, minWithdrawalUsd: 0,
+            commissionL1Pct: 0, commissionL2Pct: 0, minWithdrawalUsd: 0, affiliateCouponDiscountPct: 10,
+            salesNotifyEmail: '', claimsNotifyEmail: '',
           }}
           admins={adminsRes.ok ? adminsRes.data : []}
-          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, groups: [] }}
+          policy={policyRes.ok ? policyRes.data : { eurUsdRate: 1.135, roundPsychological: true, wholesaleMarginPct: 15, groups: [] }}
         />
       )}
     </div>

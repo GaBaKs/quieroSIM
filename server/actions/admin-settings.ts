@@ -22,6 +22,12 @@ export interface PlatformSettings {
   commissionL1Pct: number;
   commissionL2Pct: number;
   minWithdrawalUsd: number;
+  /** Descuento default de los cupones de afiliado nuevos (%). */
+  affiliateCouponDiscountPct: number;
+  /** Email que recibe aviso de cada venta (vacío = desactivado). */
+  salesNotifyEmail: string;
+  /** Email que recibe aviso de cada reclamo/caso de soporte (vacío = desactivado). */
+  claimsNotifyEmail: string;
 }
 
 export interface AdminAccount {
@@ -40,6 +46,9 @@ function mapSettings(d: Record<string, unknown>): PlatformSettings {
     commissionL1Pct: Number(d.commission_l1_pct ?? 0),
     commissionL2Pct: Number(d.commission_l2_pct ?? 0),
     minWithdrawalUsd: Number(d.min_withdrawal_usd ?? 0),
+    affiliateCouponDiscountPct: Number(d.affiliate_coupon_discount_pct ?? 10),
+    salesNotifyEmail: (d.sales_notify_email as string | null) ?? '',
+    claimsNotifyEmail: (d.claims_notify_email as string | null) ?? '',
   };
 }
 
@@ -63,6 +72,9 @@ const settingsSchema = z.object({
   commissionL1Pct: z.number().min(0).max(100),
   commissionL2Pct: z.number().min(0).max(100),
   minWithdrawalUsd: z.number().min(0).max(100000),
+  affiliateCouponDiscountPct: z.number().min(0).max(100),
+  salesNotifyEmail: z.union([z.literal(''), z.string().trim().email()]),
+  claimsNotifyEmail: z.union([z.literal(''), z.string().trim().email()]),
 });
 
 export async function updateSettings(input: PlatformSettings): Promise<Result<PlatformSettings>> {
@@ -82,6 +94,9 @@ export async function updateSettings(input: PlatformSettings): Promise<Result<Pl
       commission_l1_pct: s.commissionL1Pct,
       commission_l2_pct: s.commissionL2Pct,
       min_withdrawal_usd: s.minWithdrawalUsd,
+      affiliate_coupon_discount_pct: s.affiliateCouponDiscountPct,
+      sales_notify_email: s.salesNotifyEmail || null,
+      claims_notify_email: s.claimsNotifyEmail || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1);
@@ -128,6 +143,7 @@ export interface PricingGroup {
 export interface PricingPolicy {
   eurUsdRate: number;
   roundPsychological: boolean;
+  wholesaleMarginPct: number;
   groups: PricingGroup[];
 }
 
@@ -151,7 +167,7 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   if (!guard.ok) return guard;
   const supabase = await createSupabaseServerClient();
   const [{ data: s }, { data: groups }, { data: members }, { data: comp }, { data: ranges }] = await Promise.all([
-    supabase.from('platform_settings').select('eur_usd_rate, round_psychological').eq('id', 1).maybeSingle(),
+    supabase.from('platform_settings').select('eur_usd_rate, round_psychological, wholesale_margin_pct').eq('id', 1).maybeSingle(),
     supabase.from('country_group').select('*').order('sort_order'),
     supabase.from('country_group_member').select('iso_country, group_id'),
     supabase.from('group_competitor_price').select('*').order('sort_order'),
@@ -183,6 +199,7 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   return ok({
     eurUsdRate: Number(s?.eur_usd_rate ?? 1.135),
     roundPsychological: s?.round_psychological ?? true,
+    wholesaleMarginPct: Number(s?.wholesale_margin_pct ?? 15),
     groups: (groups ?? []).map((g) => ({
       id: g.id, name: g.name, slug: g.slug, isDefault: g.is_default,
       floorMarkupPct: g.floor_markup_pct === null ? null : Number(g.floor_markup_pct),
@@ -195,10 +212,14 @@ export async function getPricingPolicy(): Promise<Result<PricingPolicy>> {
   });
 }
 
-const globalsSchema = z.object({ eurUsdRate: z.number().min(0.1).max(10), roundPsychological: z.boolean() });
+const globalsSchema = z.object({
+  eurUsdRate: z.number().min(0.1).max(10),
+  roundPsychological: z.boolean(),
+  wholesaleMarginPct: z.number().min(0).max(1000),
+});
 
-/** Tipo de cambio EUR→USD + redondeo psicológico. Solo super_admin. */
-export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsychological: boolean }): Promise<Result<null>> {
+/** Tipo de cambio EUR→USD + redondeo psicológico + margen mayorista global. Solo super_admin. */
+export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsychological: boolean; wholesaleMarginPct: number }): Promise<Result<null>> {
   const guard = await requireSuperAdmin();
   if (!guard.ok) return guard;
   const parsed = parseInput(globalsSchema, input);
@@ -206,7 +227,7 @@ export async function updatePricingGlobals(input: { eurUsdRate: number; roundPsy
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from('platform_settings')
-    .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, updated_at: new Date().toISOString() })
+    .update({ eur_usd_rate: parsed.data.eurUsdRate, round_psychological: parsed.data.roundPsychological, wholesale_margin_pct: parsed.data.wholesaleMarginPct, updated_at: new Date().toISOString() })
     .eq('id', 1);
   if (error) {
     logger.error('updatePricingGlobals falló', { error: error.message });

@@ -32,6 +32,12 @@ export interface AdminPlanRow {
   useCustomMargin: boolean;
   priceFinal: number | null;
   isRecommended: boolean;
+  // Precio mayorista (espejo del retail: lista / margen propio / fijo).
+  priceWholesale: number | null;
+  wholesaleMarginPct: number | null;
+  wholesalePriceFixed: number | null;
+  useWholesaleFixedPrice: boolean;
+  useWholesaleCustomMargin: boolean;
 }
 
 export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
@@ -45,7 +51,7 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
     supabase
       .from('plan')
       .select(
-        'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, use_custom_margin, price_final)',
+        'id, name, iso_country, country_region, data_amount, duration_days, status, is_recommended, plan_pricing(cost_provider_eur, margin_pct, price_fixed, use_fixed_price, use_custom_margin, price_final, price_wholesale, wholesale_margin_pct, wholesale_price_fixed, use_wholesale_fixed_price, use_wholesale_custom_margin)',
       )
       .order('name', { ascending: true })
       .order('id')
@@ -83,6 +89,11 @@ export async function getPlansAdmin(): Promise<Result<AdminPlanRow[]>> {
       useCustomMargin: !!pr?.use_custom_margin,
       priceFinal: pr?.price_final === undefined || pr?.price_final === null ? null : Number(pr.price_final),
       isRecommended: !!p.is_recommended,
+      priceWholesale: pr?.price_wholesale === undefined || pr?.price_wholesale === null ? null : Number(pr.price_wholesale),
+      wholesaleMarginPct: pr?.wholesale_margin_pct === undefined || pr?.wholesale_margin_pct === null ? null : Number(pr.wholesale_margin_pct),
+      wholesalePriceFixed: pr?.wholesale_price_fixed === undefined || pr?.wholesale_price_fixed === null ? null : Number(pr.wholesale_price_fixed),
+      useWholesaleFixedPrice: !!pr?.use_wholesale_fixed_price,
+      useWholesaleCustomMargin: !!pr?.use_wholesale_custom_margin,
     };
   });
   return ok(rows);
@@ -144,6 +155,68 @@ export async function updatePlanPricing(input: {
   // Regenerar la landing al instante (el catálogo ISR muestra el precio nuevo).
   revalidatePath('/');
   return ok({ priceFinal: Number(data.price_final) });
+}
+
+const wholesalePricingSchema = z
+  .object({
+    planId: z.string().uuid(),
+    // auto = margen mayorista global · margin = margen propio del plan · fixed = precio fijo USD.
+    mode: z.enum(['auto', 'margin', 'fixed']),
+    marginPct: z.number().min(0).max(1000).optional(),
+    priceFixed: z.number().min(0).max(100000).nullable().optional(),
+  })
+  .refine((d) => d.mode !== 'fixed' || (d.priceFixed !== undefined && d.priceFixed !== null), {
+    message: 'Con precio fijo tenés que indicar el precio.',
+  })
+  .refine((d) => d.mode !== 'margin' || d.marginPct !== undefined, {
+    message: 'Con margen personalizado tenés que indicar el porcentaje.',
+  });
+
+/**
+ * Precio MAYORISTA por plan (espejo del retail). El trigger recalcula
+ * price_wholesale; el helper wholesale_price_for lo respeta tanto en el catálogo
+ * de la agencia como en el cobro del lote. Solo super_admin.
+ */
+export async function updateWholesalePricing(input: {
+  planId: string;
+  mode: 'auto' | 'margin' | 'fixed';
+  marginPct?: number;
+  priceFixed?: number | null;
+}): Promise<Result<{ priceWholesale: number }>> {
+  const guard = await requireSuperAdmin();
+  if (!guard.ok) return guard;
+  const parsed = parseInput(wholesalePricingSchema, input);
+  if (!parsed.ok) return parsed;
+  const { planId, mode, marginPct, priceFixed } = parsed.data;
+
+  const supabase = await createSupabaseServerClient();
+  const patch: TablesUpdate<'plan_pricing'> = {
+    use_wholesale_fixed_price: mode === 'fixed',
+    use_wholesale_custom_margin: mode === 'margin',
+  };
+  if (mode === 'margin' && marginPct !== undefined) patch.wholesale_margin_pct = marginPct;
+  if (mode === 'fixed' && priceFixed !== undefined) patch.wholesale_price_fixed = priceFixed;
+
+  // El trigger recalcula price_wholesale; lo leemos de vuelta.
+  const { data, error } = await supabase
+    .from('plan_pricing')
+    .update(patch)
+    .eq('plan_id', planId)
+    .select('price_wholesale')
+    .single();
+
+  if (error || !data) {
+    logger.error('updateWholesalePricing falló', { error: error?.message });
+    return err(ErrorCodes.INTERNAL, 'No pudimos actualizar el precio mayorista.');
+  }
+
+  await supabase.rpc('log_admin_action', {
+    p_action: 'plan_wholesale_pricing_update',
+    p_payload: { plan_id: planId, mode, margin_pct: marginPct ?? null, price_fixed: priceFixed ?? null },
+  });
+
+  // El precio mayorista no afecta la landing retail (no revalidamos '/').
+  return ok({ priceWholesale: Number(data.price_wholesale) });
 }
 
 const statusSchema = z.object({

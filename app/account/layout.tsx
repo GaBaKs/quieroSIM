@@ -6,6 +6,7 @@ import AccountLogout from '@/components/account/AccountLogout';
 
 import { AccountThemeProvider } from '@/components/account/AccountThemeProvider';
 import AccountShell from '@/components/account/AccountShell';
+import { getMyAgency } from '@/server/actions/wholesale';
 
 /**
  * Panel del usuario final (Etapa 6). El proxy ya exige sesión para /account/*;
@@ -26,11 +27,16 @@ export default async function AccountLayout({ children }: { children: React.Reac
     .eq('user_id', user.id)
     .single();
 
+
   const isAdmin = !!adminData;
+
+  const agencyRes = await getMyAgency();
+  const hasWholesaleRole = agencyRes.ok && agencyRes.data?.status === 'approved';
+
 
   return (
     <AccountThemeProvider>
-      <AccountShell email={user.email || ''} isAdmin={isAdmin}>
+      <AccountShell email={user.email || ''} isAdmin={isAdmin} hasWholesaleRole={hasWholesaleRole}>
         {children}
       </AccountShell>
     </AccountThemeProvider>
