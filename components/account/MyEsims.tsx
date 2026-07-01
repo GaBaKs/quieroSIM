@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  Calendar, Check, Copy, Loader2, Mail, QrCode, Signal, Smartphone, X,
+  Calendar, Check, Copy, Loader2, Mail, QrCode, Signal, Smartphone, X, AlertCircle
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -72,6 +72,12 @@ export default function MyEsims({ initialEsims, userId }: { initialEsims: MyEsim
       <div>
         <h1 className="font-sans text-2xl font-black text-slate-900 tracking-tight">{t('account.title')}</h1>
         <p className="text-sm text-slate-500 mt-1">{t('account.subtitle')}</p>
+      </div>
+
+      {/* Aviso Importante de activación */}
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-800 flex items-center gap-3">
+        <AlertCircle className="h-5 w-5 shrink-0 text-blue-600" />
+        <p>{lang === 'EN' ? 'IMPORTANT: Days start counting automatically upon arrival at the destination.' : lang === 'PT' ? 'IMPORTANTE: Os dias começam a contar automaticamente ao chegar no destino.' : 'IMPORTANTE: Los días comienzan a contar automáticamente al llegar a destino.'}</p>
       </div>
 
       {esims.length === 0 ? (

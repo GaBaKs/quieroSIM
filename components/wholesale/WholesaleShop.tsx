@@ -167,7 +167,7 @@ function PayForm({ total, onPaid }: { total: number; onPaid: () => void }) {
 
 function PlanRow({ p, qty, setQty }: { p: WholesalePlan; qty: number; setQty: (id: string, q: number) => void }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   const text = p.countryRegion ?? p.isoCountry ?? '';
   const isLong = text.length > 80;
   const displayText = expanded || !isLong ? text : text.slice(0, 80) + '...';
@@ -179,8 +179,8 @@ function PlanRow({ p, qty, setQty }: { p: WholesalePlan; qty: number; setQty: (i
         <p className="text-[11px] text-zinc-400 mt-0.5 break-words">
           {displayText}
           {isLong && (
-            <button 
-              onClick={() => setExpanded(!expanded)} 
+            <button
+              onClick={() => setExpanded(!expanded)}
               className="ml-1 font-bold text-[#9933c1] dark:text-[#b3ff6b] hover:underline cursor-pointer"
             >
               {expanded ? 'Mostrar menos' : 'Mostrar más'}

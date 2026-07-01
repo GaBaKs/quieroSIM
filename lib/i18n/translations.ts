@@ -302,9 +302,9 @@ export const translations: Record<Language, any> = {
       verifiedBuyer: 'Comprador verificado',
       subtitle: 'Más de 10,000 viajeros confían en QuieroSIM para mantenerse conectados en todo momento.',
       reviews: [
-        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Descubrí QuieroSIM recientemente y, desde mi primera experiencia, se ha convertido en una solución de conectividad indispensable para todos mis viajes.', location: 'Viaje a EE.UU.' },
-        { name: 'Juan Cruz', handle: '@juan_viajero', text: 'El plan de 10GB en Europa me rindió perfecto. Y el soporte me ayudó enseguida cuando tuve una duda.', location: 'Viaje a España' },
-        { name: 'Carolina M.', handle: '@carom_tech', text: 'Soy productora y necesito conectividad siempre. El roaming me arruinaba. QuieroSIM me salvó la vida en mi estadía en la gira en Chile.', location: 'Viaje a Chile' }
+        { name: 'Juan Castillo', handle: '@karen_chris', text: 'Descubrí QuieroSIM recientemente y, desde mi primera experiencia, se ha convertido en una solución de conectividad indispensable para todos mis viajes.', location: 'Viaje a EE.UU.' },
+        { name: 'Camila Montenegro', handle: '@juan_viajero', text: 'El plan de 10GB en Europa me rindió perfecto. Y el soporte me ayudó enseguida cuando tuve una duda.', location: 'Viaje a España' },
+        { name: 'Erik Demierre', handle: '@carom_tech', text: 'Soy productora y necesito conectividad siempre. El roaming me arruinaba. QuieroSIM me salvó la vida en mi estadía en la gira en Chile.', location: 'Viaje a Chile' }
       ],
       feedbackTitle: '¿Tuviste una buena experiencia con tu eSIM?',
       feedbackDesc: 'Trabajamos incansablemente por brindar la mejor conectividad turística de telecomunicaciones. Tu opinión ayuda tanto a otros viajeros como a las auditorías de satisfacción de nuestros canales de pago.',
@@ -784,9 +784,9 @@ export const translations: Record<Language, any> = {
       verifiedBuyer: 'Verified buyer',
       subtitle: 'More than 10,000 travelers trust QuieroSIM to stay connected at all times.',
       reviews: [
-        { name: 'Karen Christensen', handle: '@karen_chris', text: 'I\'ve been using QuieroSIM for years on my trips and it\'s always an excellent decision. Works everywhere super fast. I once needed help installing it and support helped me out. Super fast and polite.', location: 'Trip to USA' },
-        { name: 'Juan Cruz', handle: '@juan_viajero', text: 'The 10GB plan in Europe worked perfectly for me. And the support helped right away when I had a question.', location: 'Trip to Spain' },
-        { name: 'Carolina M.', handle: '@carom_tech', text: 'I am a producer and I need connectivity always. Roaming was ruining me. QuieroSIM saved my life during my tour in Chile.', location: 'Trip to Chile' }
+        { name: 'Juan Castillo', handle: '@karen_chris', text: 'I\'ve been using QuieroSIM for years on my trips and it\'s always an excellent decision. Works everywhere super fast. I once needed help installing it and support helped me out. Super fast and polite.', location: 'Trip to USA' },
+        { name: 'Camila Montenegro', handle: '@juan_viajero', text: 'The 10GB plan in Europe worked perfectly for me. And the support helped right away when I had a question.', location: 'Trip to Spain' },
+        { name: 'Erik Demierre', handle: '@carom_tech', text: 'I am a producer and I need connectivity always. Roaming was ruining me. QuieroSIM saved my life during my tour in Chile.', location: 'Trip to Chile' }
       ],
       feedbackTitle: 'Did you have a good experience with your eSIM?',
       feedbackDesc: 'We work tirelessly to provide the best tourist telecommunications connectivity. Your feedback helps both other travelers and the satisfaction audits of our payment channels.',
@@ -1266,9 +1266,9 @@ export const translations: Record<Language, any> = {
       verifiedBuyer: 'Comprador verificado',
       subtitle: 'Mais de 10.000 viajantes confiam na QuieroSIM para se manterem conectados sempre.',
       reviews: [
-        { name: 'Karen Christensen', handle: '@karen_chris', text: 'Descobri a QuieroSIM recentemente e, desde a minha primeira experiência, tornou-se uma solução de conectividade indispensável para todas as minhas viagens.', location: 'Viagem aos EUA' },
-        { name: 'Juan Cruz', handle: '@juan_viajero', text: 'O plano de 10GB na Europa funcionou perfeitamente. O suporte me ajudou na hora quando tive uma dúvida.', location: 'Viagem para a Espanha' },
-        { name: 'Carolina M.', handle: '@carom_tech', text: 'Trabalho como produtora e preciso sempre de conexão. O roaming estava estourando meu orçamento. A QuieroSIM me salvou no Chile.', location: 'Viagem ao Chile' }
+        { name: 'Juan Castillo', handle: '@karen_chris', text: 'Descobri a QuieroSIM recentemente e, desde a minha primeira experiência, tornou-se uma solução de conectividade indispensável para todas as minhas viagens.', location: 'Viagem aos EUA' },
+        { name: 'Camila Montenegro', handle: '@juan_viajero', text: 'O plano de 10GB na Europa funcionou perfeitamente. O suporte me ajudou na hora quando tive uma dúvida.', location: 'Viagem para a Espanha' },
+        { name: 'Erik Demierre', handle: '@carom_tech', text: 'Trabalho como produtora e preciso sempre de conexão. O roaming estava estourando meu orçamento. A QuieroSIM me salvou no Chile.', location: 'Viagem ao Chile' }
       ],
       feedbackTitle: 'Você teve uma boa experiência com seu eSIM?',
       feedbackDesc: 'Trabalhamos incansavelmente para oferecer a melhor conectividade turística. Sua opinião ajuda tanto outros viajantes quanto as auditorias de satisfação dos nossos canais de pagamento.',

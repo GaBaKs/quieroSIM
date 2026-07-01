@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Destination, Plan } from '@/lib/types';
-import { Search, MapPin, Sparkles, Shield, Tag, Calendar, HelpCircle, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, MapPin, Sparkles, Shield, Tag, Calendar, HelpCircle, Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import CheckoutModal from '@/components/CheckoutModal';
@@ -563,6 +563,12 @@ export default function Destinations({ destinations, plansByDestination }: Desti
               <Shield className="h-4 w-4" />
               <span className="font-sans font-black">{t('destinations.details.stripeGuarantee')}</span>
             </div>
+          </div>
+
+          {/* Aviso Importante de activación */}
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-800 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-blue-600" />
+            <p>{lang === 'EN' ? 'IMPORTANT: Days start counting automatically upon arrival at the destination.' : lang === 'PT' ? 'IMPORTANTE: Os dias começam a contar automaticamente ao chegar no destino.' : 'IMPORTANTE: Los días comienzan a contar automáticamente al llegar a destino.'}</p>
           </div>
 
           {/* Adaptive columns depending on active plan sizes */}
