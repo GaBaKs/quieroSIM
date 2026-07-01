@@ -94,29 +94,9 @@ export default function WholesaleShop({ catalog }: { catalog: WholesalePlan[] })
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 divide-y divide-zinc-100 dark:divide-white/5 max-h-[60vh] overflow-y-auto">
           {rows.length === 0 && <p className="p-8 text-center text-sm text-zinc-400">No hay planes que coincidan.</p>}
-          {rows.map((p) => {
-            const qty = cart[p.planId] ?? 0;
-            return (
-              <div key={p.planId} className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{p.name}</p>
-                  <p className="text-[11px] text-zinc-400">{p.countryRegion ?? p.isoCountry ?? ''} · {p.durationDays ?? '—'} días</p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-sm font-black text-[#9933c1] dark:text-[#b3ff6b]">{usd(p.priceWholesale)}</span>
-                  {qty > 0 ? (
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => setQty(p.planId, qty - 1)} className="rounded-md bg-zinc-100 dark:bg-white/10 p-1 cursor-pointer"><Minus className="h-3.5 w-3.5" /></button>
-                      <input type="number" min="0" value={qty} onChange={(e) => setQty(p.planId, Math.floor(Number(e.target.value) || 0))} className="w-12 text-center text-sm bg-transparent border border-zinc-200 dark:border-white/10 rounded-md py-0.5 dark:text-white" />
-                      <button onClick={() => setQty(p.planId, qty + 1)} className="rounded-md bg-zinc-100 dark:bg-white/10 p-1 cursor-pointer"><Plus className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setQty(p.planId, 1)} className="rounded-lg bg-[#9933c1] hover:bg-[#7100a5] text-white px-3 py-1.5 text-xs font-bold cursor-pointer">Agregar</button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {rows.map((p) => (
+            <PlanRow key={p.planId} p={p} qty={cart[p.planId] ?? 0} setQty={setQty} />
+          ))}
         </div>
       </div>
 
@@ -181,6 +161,46 @@ function PayForm({ total, onPaid }: { total: number; onPaid: () => void }) {
       <button onClick={pay} disabled={paying || !stripe} className="w-full rounded-xl bg-[#9933c1] hover:bg-[#7100a5] text-white font-bold py-3 text-sm transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
         {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Pagar {usd(total)}
       </button>
+    </div>
+  );
+}
+
+function PlanRow({ p, qty, setQty }: { p: WholesalePlan; qty: number; setQty: (id: string, q: number) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const text = p.countryRegion ?? p.isoCountry ?? '';
+  const isLong = text.length > 80;
+  const displayText = expanded || !isLong ? text : text.slice(0, 80) + '...';
+
+  return (
+    <div className="p-3 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{p.name}</p>
+        <p className="text-[11px] text-zinc-400 mt-0.5 break-words">
+          {displayText}
+          {isLong && (
+            <button 
+              onClick={() => setExpanded(!expanded)} 
+              className="ml-1 font-bold text-[#9933c1] dark:text-[#b3ff6b] hover:underline cursor-pointer"
+            >
+              {expanded ? 'Mostrar menos' : 'Mostrar más'}
+            </button>
+          )}
+          <span className="ml-1 opacity-70">· {p.durationDays ?? '—'} días</span>
+        </p>
+      </div>
+      <div className="flex items-center gap-3 shrink-0 pt-0.5">
+        <span className="text-sm font-black text-[#9933c1] dark:text-[#b3ff6b]">{usd(p.priceWholesale)}</span>
+        {qty > 0 ? (
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setQty(p.planId, qty - 1)} className="rounded-md bg-zinc-100 dark:bg-white/10 p-1 cursor-pointer"><Minus className="h-3.5 w-3.5" /></button>
+            <input type="number" min="0" value={qty} onChange={(e) => setQty(p.planId, Math.floor(Number(e.target.value) || 0))} className="w-12 text-center text-sm bg-transparent border border-zinc-200 dark:border-white/10 rounded-md py-0.5 dark:text-white" />
+            <button onClick={() => setQty(p.planId, qty + 1)} className="rounded-md bg-zinc-100 dark:bg-white/10 p-1 cursor-pointer"><Plus className="h-3.5 w-3.5" /></button>
+          </div>
+        ) : (
+          <button onClick={() => setQty(p.planId, 1)} className="rounded-lg bg-[#9933c1] hover:bg-[#7100a5] text-white px-3 py-1.5 text-xs font-bold cursor-pointer">Agregar</button>
+        )}
+      </div>
     </div>
   );
 }

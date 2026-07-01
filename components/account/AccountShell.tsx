@@ -9,10 +9,12 @@ import { motion } from 'motion/react';
 export default function AccountShell({
   email,
   isAdmin,
+  hasWholesaleRole,
   children,
 }: {
   email: string;
   isAdmin: boolean;
+  hasWholesaleRole: boolean;
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,7 +22,7 @@ export default function AccountShell({
 
   return (
     <div className="selection:bg-[#9933c1] selection:text-white dark:bg-zinc-950 transition-colors duration-200">
-      <AccountSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} isAdmin={isAdmin} />
+      <AccountSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} isAdmin={isAdmin} hasWholesaleRole={hasWholesaleRole} />
 
       <div className="lg:pl-64 flex flex-col min-h-screen transition-all duration-300">
         <AccountTopbar setIsOpen={setSidebarOpen} email={email} isAdmin={isAdmin} />
