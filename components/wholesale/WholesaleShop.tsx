@@ -35,7 +35,7 @@ export default function WholesaleShop({ catalog }: { catalog: WholesalePlan[] })
     if (!q.trim()) return true;
     const s = q.toLowerCase();
     return p.name.toLowerCase().includes(s) || (p.countryRegion ?? '').toLowerCase().includes(s) || (p.isoCountry ?? '').toLowerCase().includes(s);
-  }).slice(0, 200);
+  });
 
   const goPay = async () => {
     if (count === 0) return;
